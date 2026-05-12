@@ -1,0 +1,2816 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDE - Processo de Desenvolvimento de Empreendimento</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script>
+        // Inicializa EmailJS com a Public Key
+        (function(){ emailjs.init({ publicKey: "HF6APN6CEBMHgL_eo" }); })();
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; transition: background-color 0.2s, color 0.2s; }
+
+        /* ── DARK MODE ── */
+        body.dark { background-color: #0f172a; color: #e2e8f0; }
+
+        /* Layout base */
+        body.dark .card { background: #1e293b !important; border-color: #334155 !important; }
+        body.dark header { background: #1e293b !important; border-color: #334155 !important; }
+        body.dark main { background: transparent; }
+        body.dark #loadingOverlay { background: #0f172a; }
+        body.dark .brand-title { background: linear-gradient(90deg,#818cf8,#6366f1); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+
+        /* Tabela principal */
+        body.dark table thead { background: #1e293b !important; }
+        body.dark table tr { border-color: #334155 !important; }
+        body.dark table td, body.dark table th { color: #cbd5e1 !important; border-color: #334155 !important; }
+        body.dark table tbody tr:hover td { background: #334155 !important; }
+        body.dark table .bg-slate-50 { background: #1e293b !important; }
+
+        /* Backgrounds genéricos */
+        body.dark .bg-white { background: #1e293b !important; }
+        body.dark .bg-slate-50 { background: #1e293b !important; }
+        body.dark .bg-slate-100 { background: #334155 !important; }
+        body.dark .bg-slate-200 { background: #475569 !important; }
+        body.dark .bg-indigo-50 { background: #1e1b4b !important; }
+        body.dark .bg-indigo-100 { background: #1e1b4b !important; }
+        body.dark .bg-rose-50 { background: #2d0a0a !important; }
+        body.dark .bg-rose-100 { background: #3b0a0a !important; }
+        body.dark .bg-amber-50 { background: #1c1507 !important; }
+        body.dark .bg-amber-100 { background: #231a05 !important; }
+        body.dark .bg-emerald-50 { background: #052e16 !important; }
+        body.dark .bg-emerald-100 { background: #052e16 !important; }
+        body.dark .bg-orange-50 { background: #1c0d00 !important; }
+        body.dark .bg-orange-100 { background: #251100 !important; }
+
+        /* Textos */
+        body.dark .text-slate-900 { color: #f1f5f9 !important; }
+        body.dark .text-slate-800 { color: #e2e8f0 !important; }
+        body.dark .text-slate-700 { color: #cbd5e1 !important; }
+        body.dark .text-slate-600 { color: #94a3b8 !important; }
+        body.dark .text-slate-500 { color: #64748b !important; }
+        body.dark .text-slate-400 { color: #475569 !important; }
+        body.dark .text-indigo-900 { color: #a5b4fc !important; }
+        body.dark .text-indigo-700 { color: #818cf8 !important; }
+        body.dark .text-indigo-600 { color: #818cf8 !important; }
+        body.dark .text-rose-700 { color: #fca5a5 !important; }
+        body.dark .text-rose-600 { color: #fca5a5 !important; }
+        body.dark .text-rose-500 { color: #fca5a5 !important; }
+        body.dark .text-amber-600 { color: #fcd34d !important; }
+        body.dark .text-orange-700 { color: #fb923c !important; }
+        body.dark .text-orange-500 { color: #f97316 !important; }
+        body.dark .text-emerald-600 { color: #6ee7b7 !important; }
+
+        /* Bordas */
+        body.dark .border-slate-200 { border-color: #334155 !important; }
+        body.dark .border-slate-100 { border-color: #1e293b !important; }
+        body.dark .border-indigo-200 { border-color: #3730a3 !important; }
+        body.dark .border-rose-200 { border-color: #7f1d1d !important; }
+        body.dark .border-orange-200 { border-color: #7c2d12 !important; }
+
+        /* Hovers */
+        body.dark .hover\:bg-slate-50:hover { background: #334155 !important; }
+        body.dark .hover\:bg-slate-100:hover { background: #475569 !important; }
+        body.dark .hover\:bg-indigo-50:hover { background: #1e1b4b !important; }
+        body.dark .hover\:bg-rose-50:hover { background: #2d0a0a !important; }
+
+        /* Inputs, selects, textareas */
+        body.dark input, body.dark select, body.dark textarea {
+            background: #334155 !important;
+            border-color: #475569 !important;
+            color: #e2e8f0 !important;
+        }
+        body.dark input::placeholder, body.dark textarea::placeholder { color: #64748b !important; }
+        body.dark input[type="checkbox"] { accent-color: #6366f1; }
+        body.dark input[type="number"] { background: #334155 !important; color: #e2e8f0 !important; }
+
+        /* Filtros e dropdowns */
+        body.dark .filter-dropdown { background: #1e293b !important; border-color: #334155 !important; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+        body.dark .filter-dropdown label { color: #cbd5e1 !important; }
+        body.dark .filter-dropdown label:hover { background: #334155 !important; }
+        body.dark #ownerDropdown { background: #1e293b !important; border-color: #334155 !important; }
+        body.dark .owner-option { color: #cbd5e1 !important; }
+        body.dark .owner-option:hover { background: #334155 !important; }
+        body.dark .owner-option.selected { background: #1e1b4b !important; color: #a5b4fc !important; }
+        body.dark #ownerTagsContainer { background: #334155 !important; border-color: #475569 !important; }
+        body.dark .owner-tag { background: #1e1b4b !important; color: #a5b4fc !important; }
+
+        /* Tabs */
+        body.dark .tab-inactive { color: #475569 !important; }
+        body.dark .tab-active { color: #818cf8 !important; border-bottom-color: #818cf8 !important; }
+        body.dark #btn-email-pendentes, body.dark #btn-email-enviados { color: #94a3b8 !important; }
+
+        /* Modais */
+        body.dark #taskModal > div, body.dark #userModal > div, body.dark #configModal > div { background: #1e293b !important; }
+        body.dark #taskModal .bg-white, body.dark #userModal .bg-white, body.dark #configModal .bg-white { background: #1e293b !important; }
+        body.dark #taskModal .bg-slate-50, body.dark #userModal .bg-slate-50, body.dark #configModal .bg-slate-50 { background: #0f172a !important; }
+        body.dark #taskModal .bg-slate-100, body.dark #userModal .bg-slate-100 { background: #334155 !important; }
+        body.dark #taskModal .border-slate-200, body.dark #userModal .border-slate-200 { border-color: #334155 !important; }
+        body.dark #taskModal label, body.dark #userModal label, body.dark #configModal label { color: #94a3b8 !important; }
+        body.dark #taskModal .text-slate-800, body.dark #taskModal .text-slate-700 { color: #e2e8f0 !important; }
+        body.dark #taskModal .text-indigo-900 { color: #a5b4fc !important; }
+        body.dark #reprogramarSection { background: #0f172a !important; border-color: #334155 !important; }
+        body.dark .bg-orange-50 { background: #1c0d00 !important; }
+        body.dark .border-orange-200 { border-color: #7c2d12 !important; }
+        body.dark .text-orange-700 { color: #fb923c !important; }
+
+        /* Drag handle e linhas */
+        body.dark .drag-handle { color: #475569 !important; }
+        body.dark .drag-handle:hover { color: #818cf8 !important; }
+        body.dark tr.dragging { background: #1e1b4b !important; }
+        body.dark tr.drag-over { border-top-color: #818cf8 !important; }
+
+        /* Caminho Crítico */
+        body.dark tr.critical-path { background: #1c1007 !important; border-left-color: #f97316 !important; }
+        body.dark tr.critical-path:hover { background: #2d1a0a !important; }
+        body.dark .critical-badge { background: #431407 !important; color: #fb923c !important; }
+
+        /* Status badges */
+        body.dark .status-pendente { background: #334155 !important; color: #94a3b8 !important; }
+        body.dark .status-andamento { background: #052e16 !important; color: #6ee7b7 !important; }
+        body.dark .status-concluido { background: #1e1b4b !important; color: #a5b4fc !important; }
+        body.dark .status-atraso { background: #3b0a0a !important; color: #fca5a5 !important; }
+
+        /* Dashboard cards */
+        body.dark .dash-card { background: #1e293b !important; border-color: #334155 !important; }
+        body.dark .icon-box { opacity: 0.85; }
+
+        /* Separador semana */
+        body.dark .gantt-row:hover { background: #334155 !important; }
+        body.dark #ganttInner > div { border-color: #334155 !important; }
+
+        /* History blocks */
+        body.dark .btn-toggle-hist { background: #1e1b4b !important; color: #818cf8 !important; }
+        body.dark .btn-toggle-hist:hover { background: #312e81 !important; }
+        body.dark .btn-zoom-hist { background: #1e1b4b !important; color: #818cf8 !important; }
+        body.dark .btn-zoom-hist:hover { background: #312e81 !important; color: white !important; }
+
+        /* Scrollbars */
+        body.dark ::-webkit-scrollbar { width: 6px; height: 6px; }
+        body.dark ::-webkit-scrollbar-track { background: #0f172a; }
+        body.dark ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        body.dark ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+        /* Search highlight no dark */
+        body.dark .search-highlight { background: #854d0e; color: #fef08a; }
+
+        /* Gantt dark mode — cabeçalhos gerados via JS */
+        body.dark #ganttInner [style*="background:#eef2ff"] { background: #1e1b4b !important; }
+        body.dark #ganttInner [style*="background:#f8fafc"] { background: #1e293b !important; }
+        body.dark #ganttInner [style*="color:#4f46e5"]      { color: #818cf8 !important; }
+        body.dark #ganttInner [style*="color:#94a3b8"]      { color: #475569 !important; }
+        body.dark #ganttInner [style*="color:#1e293b"]      { color: #e2e8f0 !important; }
+        body.dark #ganttInner [style*="border-right:1px solid #f1f5f9"] { border-right-color: #334155 !important; }
+        body.dark #ganttInner [style*="border-bottom:1px solid #f1f5f9"] { border-bottom-color: #334155 !important; }
+        body.dark #ganttInner [style*="border-bottom:1px solid #e0e7ff"] { border-bottom-color: #312e81 !important; }
+        body.dark #ganttInner [style*="border-bottom:2px solid #e2e8f0"] { border-bottom-color: #334155 !important; }
+        body.dark #ganttInner { background: #0f172a; }
+        body.dark .gantt-today::after { color: #818cf8; }
+
+        /* Separador semana dark */
+        body.dark td[colspan="10"] { background: #1c1507 !important; border-top-color: #92400e !important; }
+
+        /* Botão de toggle email */
+        body.dark #btnAutoEmailToggle.bg-emerald-50 { background: #052e16 !important; border-color: #16a34a !important; color: #6ee7b7 !important; }
+        body.dark #btnAutoEmailToggle.bg-rose-50 { background: #3b0a0a !important; border-color: #dc2626 !important; color: #fca5a5 !important; }
+
+        /* Aba configs / email schedule */
+        body.dark .divide-y > * { border-color: #334155 !important; }
+        body.dark .divide-slate-100 > * { border-color: #334155 !important; }
+        .tab-inactive { color: #94a3b8; font-weight: 500; }
+        .status-badge { border-radius: 6px; font-size: 10px; font-weight: 900; text-transform: uppercase; display: inline-block; padding: 4px 8px; }
+        .status-pendente { background-color: #e2e8f0; color: #475569; }
+        .status-andamento { background-color: #dcfce7; color: #166534; }
+        .status-concluido { background-color: #dbeafe; color: #1e40af; }
+        .status-atraso { background-color: #fee2e2; color: #991b1b; }
+        .card { background: white; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        
+        .dash-card { border-radius: 16px; padding: 1.2rem; transition: transform 0.2s; cursor: pointer; border: 1px solid rgba(0,0,0,0.05); }
+        .dash-card:hover { transform: translateY(-4px); }
+        .icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 0.75rem; font-weight: bold; }
+
+        #loadingOverlay { position: fixed; inset: 0; background: #0f172a; z-index: 100; display: flex; align-items: center; justify-content: center; flex-direction: column; color: white; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #334155; border-top: 4px solid #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .brand-title { background: linear-gradient(90deg, #1e1b4b 0%, #4f46e5 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+        /* Resizable columns */
+        #taskTable th { position: relative; overflow: hidden; }
+        .col-resizer { position: absolute; right: 0; top: 0; width: 6px; height: 100%; cursor: col-resize; background: transparent; z-index: 10; user-select: none; }
+        .col-resizer:hover, .col-resizer.active { background: #6366f1; opacity: 0.5; }
+
+        /* Zoom history button */
+        .btn-zoom-hist { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; background: #e0e7ff; color: #4f46e5; border-radius: 4px; font-size: 11px; cursor: pointer; border: none; flex-shrink: 0; transition: background 0.15s; }
+        .btn-zoom-hist:hover { background: #6366f1; color: white; }
+
+        /* Collapsible history */
+        .hist-collapsed .hist-extra { display: none; }
+        .btn-toggle-hist { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; font-size: 9px; font-weight: 800; color: #6366f1; background: #eef2ff; border: none; border-radius: 4px; padding: 2px 7px; cursor: pointer; text-transform: uppercase; letter-spacing: 0.05em; }
+        .btn-toggle-hist:hover { background: #e0e7ff; }
+
+        /* Owner tags multi-select */
+        .owner-tag { display: inline-flex; align-items: center; gap: 4px; background: #e0e7ff; color: #3730a3; border-radius: 20px; padding: 2px 8px 2px 10px; font-size: 10px; font-weight: 700; }
+        .owner-tag button { background: none; border: none; color: #6366f1; cursor: pointer; font-size: 12px; line-height: 1; padding: 0; }
+        .owner-tag button:hover { color: #ef4444; }
+        #ownerTagsContainer { display: flex; flex-wrap: wrap; gap: 4px; min-height: 28px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; cursor: text; }
+        #ownerTagsContainer:focus-within { border-color: #6366f1; box-shadow: 0 0 0 2px #e0e7ff; }
+        #ownerInput { border: none; outline: none; background: transparent; font-size: 11px; min-width: 120px; flex: 1; }
+        #ownerDropdown { position: absolute; z-index: 999; background: white; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); max-height: 180px; overflow-y: auto; width: 100%; }
+        .owner-option { padding: 8px 12px; font-size: 11px; cursor: pointer; display: flex; align-items: center; }
+        .owner-option:hover { background: #eef2ff; }
+        .owner-option.selected { background: #e0e7ff; color: #3730a3; font-weight: 700; }
+
+        /* Sort indicators */
+        .sortable-th { cursor: pointer; user-select: none; }
+        .sortable-th:hover { background: #e8eaf6; }
+        .sort-icon { display: inline-block; margin-left: 4px; font-size: 10px; color: #94a3b8; transition: color 0.15s; }
+        .sortable-th.sort-asc .sort-icon::after { content: ' ▲'; color: #4f46e5; }
+        .sortable-th.sort-desc .sort-icon::after { content: ' ▼'; color: #4f46e5; }
+        .sortable-th:not(.sort-asc):not(.sort-desc) .sort-icon::after { content: ' ⇅'; }
+
+        /* Drag & drop rows */
+        tr.dragging { opacity: 0.4; background: #eef2ff !important; }
+        tr.drag-over { border-top: 3px solid #6366f1 !important; }
+        .drag-handle { cursor: grab; color: #cbd5e1; font-size: 14px; padding: 0 6px; user-select: none; }
+        .drag-handle:hover { color: #6366f1; }
+        tr:active .drag-handle { cursor: grabbing; }
+
+        /* Caminho Crítico */
+        tr.critical-path { border-left: 3px solid #f97316 !important; background: #fff7ed !important; }
+        tr.critical-path:hover { background: #ffedd5 !important; }
+        .critical-badge { display: inline-flex; align-items: center; gap: 3px; font-size: 9px; font-weight: 900; color: #c2410c; background: #fed7aa; border-radius: 4px; padding: 1px 6px; margin-left: 4px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+        /* Multi-select filter dropdown */
+        .filter-dropdown { position: absolute; z-index: 50; background: white; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); min-width: 200px; padding: 8px; margin-top: 4px; }
+        .filter-dropdown label { display: flex; align-items: center; gap-x: 8px; padding: 6px 8px; border-radius: 6px; cursor: pointer; font-size: 11px; font-weight: 600; gap: 8px; }
+        .filter-dropdown label:hover { background: #f1f5f9; }
+
+        /* Gantt */
+        .gantt-bar { height: 18px; border-radius: 4px; position: absolute; top: 50%; transform: translateY(-50%); min-width: 4px; transition: opacity 0.15s; cursor: pointer; }
+        .gantt-bar:hover { opacity: 0.8; filter: brightness(1.1); }
+        .gantt-bar-andamento { background: #f59e0b; }
+        .gantt-bar-concluido { background: #10b981; }
+        .gantt-bar-atraso    { background: #ef4444; }
+        .gantt-bar-pendente  { background: #94a3b8; }
+        .gantt-today { position: absolute; top: 0; bottom: 0; width: 2px; background: #6366f1; opacity: 0.7; z-index: 5; pointer-events: none; }
+        .gantt-today::after { content: 'Hoje'; position: absolute; top: -16px; left: 50%; transform: translateX(-50%); font-size: 8px; font-weight: 900; color: #6366f1; white-space: nowrap; }
+        .gantt-row { position: relative; border-bottom: 1px solid #f1f5f9; }
+        .gantt-row:hover { background: #f8fafc; }
+
+        /* Search highlight */
+        .search-highlight { background: #fef08a; border-radius: 2px; padding: 0 1px; }
+
+        /* Separador "vence essa semana" */
+        .week-separator-row td { position: relative; }
+        .week-separator-label { display: block; font-size: 8px; font-weight: 900; color: #f59e0b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 2px; }
+
+        /* Badge contadores no header */
+        .atraso-badge { background: #fee2e2; color: #991b1b; font-size: 9px; font-weight: 900; border-radius: 9999px; padding: 1px 7px; margin-left: 5px; vertical-align: middle; }
+        .critico-badge-header { background: #fed7aa; color: #c2410c; font-size: 9px; font-weight: 900; border-radius: 9999px; padding: 1px 7px; margin-left: 5px; vertical-align: middle; }
+    </style>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyBshYvEFAzYwQPI8R2JTx02B-30Lpriilc",
+            authDomain: "bemf-pde.firebaseapp.com",
+            projectId: "bemf-pde",
+            storageBucket: "bemf-pde.firebasestorage.app",
+            messagingSenderId: "742435947116",
+            appId: "1:742435947116:web:d01298e4918b74ad108e49"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const tasksCol = collection(db, "tasks");
+        const usersCol = collection(db, "users");
+        const emailLogsCol = collection(db, "emailLogs");
+        const configsCol = collection(db, "configs");
+
+        window.saveToFirebase = async (data) => { await setDoc(doc(db, "tasks", String(data.id)), data); };
+        window.deleteFromFirebase = async (id) => { await deleteDoc(doc(db, "tasks", String(id))); };
+        window.saveUserToFirebase = async (data) => { await setDoc(doc(db, "users", String(data.id)), data); };
+        window.deleteUserFromFirebase = async (id) => { await deleteDoc(doc(db, "users", String(id))); };
+        window.saveEmailLog = async (data) => { await setDoc(doc(db, "emailLogs", String(data.id)), data); };
+        window.saveConfig = async (data) => { await setDoc(doc(db, "configs", String(data.id)), data); };
+        window.deleteConfig = async (id) => { await deleteDoc(doc(db, "configs", String(id))); };
+        window.saveOrderToFirebase = async (orderArr) => { await setDoc(doc(db, "configs", "taskOrder"), { id: "taskOrder", type: "taskOrder", order: orderArr }); };
+
+        onSnapshot(tasksCol, (snap) => {
+            window.tasks = [];
+            snap.forEach(d => window.tasks.push(d.data()));
+            window.tasks.sort((a, b) => b.id - a.id);
+            document.getElementById('loadingOverlay').style.display = 'none';
+            updateDropdowns();
+            renderTasks();
+            updateCharts();
+            renderGantt();
+            renderOwnerChart();
+            updateAtrasoBadge();
+            scheduleAutoEmailCheck();
+        });
+
+        onSnapshot(usersCol, (snap) => {
+            window.users = [];
+            snap.forEach(d => window.users.push(d.data()));
+            window.users.sort((a, b) => (a.name||'').localeCompare(b.name||''));
+            renderUsersTable();
+            updateOwnerSelect();
+            renderEmailSchedule();
+            // Popula o select "Você é:" no header
+            const sel = document.getElementById('currentUserSelect');
+            if (sel) {
+                const savedId = localStorage.getItem('pde_user') || '';
+                sel.innerHTML = '<option value="">— selecione —</option>' +
+                    window.users.map(u => `<option value="${u.id}" ${String(u.id) === savedId ? 'selected' : ''}>${u.name}</option>`).join('');
+                const saved = window.users.find(u => String(u.id) === savedId);
+                window._currentUserName = saved ? saved.name : '';
+            }
+        });
+
+        onSnapshot(emailLogsCol, (snap) => {
+            window.emailLogs = [];
+            snap.forEach(d => window.emailLogs.push(d.data()));
+            window.emailLogs.sort((a, b) => b.sentAt - a.sentAt);
+            renderEmailSchedule();
+        });
+
+        onSnapshot(configsCol, (snap) => {
+            window.configs = { empreendimentos: [], setores: [] };
+            window.taskOrder = window.taskOrder || [];
+            snap.forEach(d => {
+                const cfg = d.data();
+                if (cfg.type === 'empreendimento') window.configs.empreendimentos.push(cfg);
+                if (cfg.type === 'setor') window.configs.setores.push(cfg);
+                if (cfg.type === 'taskOrder') window.taskOrder = cfg.order || [];
+            });
+            window.configs.empreendimentos.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            window.configs.setores.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            renderConfigsTable();
+            updateConfigSelects();
+        });
+    </script>
+</head>
+<body class="text-slate-800">
+
+    <div id="loadingOverlay">
+        <div class="spinner"></div>
+        <p class="font-bold tracking-widest text-xs uppercase">Sincronizando PDE...</p>
+    </div>
+
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm">
+        <div class="max-w-[1920px] mx-auto px-6 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div>
+                <h1 class="text-2xl font-black tracking-tighter uppercase italic brand-title">PDE <span class="text-slate-400 font-light">|</span> Gestão de Empreendimento</h1>
+                <p class="text-slate-400 text-[10px] font-bold uppercase tracking-widest flex items-center gap-2">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span> Dashboard de Resultados
+                </p>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <nav class="flex gap-8 mr-8 text-xs font-bold uppercase tracking-widest">
+                    <button onclick="switchTab('lista')" id="btn-tab-lista" class="pb-2 tab-active">LISTA DE ATIVIDADES</button>
+                    <button onclick="switchTab('analise')" id="btn-tab-analise" class="pb-2 tab-inactive">ANÁLISE E DASHBOARD</button>
+                    <button onclick="switchTab('usuarios')" id="btn-tab-usuarios" class="pb-2 tab-inactive">CONFIGURAÇÕES</button>
+                </nav>
+                <!-- Campo: quem está usando agora -->
+                <div class="flex items-center gap-2 mr-4 border border-slate-200 rounded-lg px-3 py-1.5 bg-slate-50" title="Seu nome aparecerá nos registros de edição">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase whitespace-nowrap">Você é:</span>
+                    <select id="currentUserSelect" onchange="window._currentUserName = this.options[this.selectedIndex].text; localStorage.setItem('pde_user', this.value)" class="text-xs font-bold text-indigo-700 bg-transparent border-none outline-none cursor-pointer">
+                        <option value="">— selecione —</option>
+                    </select>
+                </div>
+                <button onclick="toggleDarkMode()" id="btnDark" title="Alternar modo escuro"
+                    class="p-2 rounded-lg border border-slate-200 hover:bg-slate-100 transition-all text-slate-500 text-sm">🌙</button>
+                <button onclick="addTask()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg transition-all">
+                    + NOVA ATIVIDADE
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-[1920px] mx-auto p-6">
+        
+        <section id="tab-content-lista" class="space-y-6">
+            <div class="card p-4 flex flex-wrap gap-4 items-end justify-between bg-white">
+                <div class="flex flex-wrap gap-3 items-end">
+
+                    <!-- Filtro Empreendimento multi-select -->
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Empreendimento</label>
+                        <div class="relative">
+                            <button id="btnProjFilter" onclick="toggleDropdown('projFilterDropdown')"
+                                class="flex items-center gap-2 text-xs px-3 py-2 border rounded-md bg-white min-w-[170px] font-bold text-slate-700 hover:bg-slate-50 outline-none">
+                                <span id="labelProjFilter">Todos</span>
+                                <span class="ml-auto text-slate-400 text-[10px]">▾</span>
+                            </button>
+                            <div id="projFilterDropdown" class="filter-dropdown hidden" style="top:100%;left:0;">
+                                <label><input type="checkbox" class="proj-cb" value="all" checked onchange="onProjCbChange(this)"> Todos</label>
+                                <div id="projCbList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtro Status multi-select -->
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Status</label>
+                        <div class="relative">
+                            <button id="btnStatFilter" onclick="toggleDropdown('statFilterDropdown')"
+                                class="flex items-center gap-2 text-xs px-3 py-2 border rounded-md bg-white min-w-[150px] font-bold text-slate-700 hover:bg-slate-50 outline-none">
+                                <span id="labelStatFilter">Todos</span>
+                                <span class="ml-auto text-slate-400 text-[10px]">▾</span>
+                            </button>
+                            <div id="statFilterDropdown" class="filter-dropdown hidden" style="top:100%;left:0;">
+                                <label><input type="checkbox" class="stat-cb" value="all" checked onchange="onStatCbChange(this)"> Todos</label>
+                                <label><input type="checkbox" class="stat-cb" value="pendente" onchange="onStatCbChange(this)"> Pendente</label>
+                                <label><input type="checkbox" class="stat-cb" value="andamento" onchange="onStatCbChange(this)"> Em Andamento</label>
+                                <label><input type="checkbox" class="stat-cb" value="concluido" onchange="onStatCbChange(this)"> Concluído</label>
+                                <label><input type="checkbox" class="stat-cb" value="atraso" onchange="onStatCbChange(this)"> Atraso</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filtro Responsável multi-select -->
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Responsável</label>
+                        <div class="relative">
+                            <button id="btnOwnerFilter" onclick="toggleDropdown('ownerFilterDropdown')"
+                                class="flex items-center gap-2 text-xs px-3 py-2 border rounded-md bg-white min-w-[150px] font-bold text-slate-700 hover:bg-slate-50 outline-none">
+                                <span id="labelOwnerFilter">Todos</span>
+                                <span class="ml-auto text-slate-400 text-[10px]">▾</span>
+                            </button>
+                            <div id="ownerFilterDropdown" class="filter-dropdown hidden" style="top:100%;left:0;">
+                                <label><input type="checkbox" class="owner-cb" value="all" checked onchange="onOwnerCbChange(this)"> Todos</label>
+                                <div id="ownerCbList"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sprint -->
+                    <div class="flex gap-2 p-2 bg-indigo-50 rounded-lg border border-indigo-100">
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-indigo-400 uppercase mb-1">Início Sprint</label>
+                            <input type="date" id="filterSprintStart" onchange="renderTasks()" class="text-xs p-1 border rounded-md outline-none">
+                        </div>
+                        <div class="flex flex-col">
+                            <label class="text-[9px] font-bold text-indigo-400 uppercase mb-1">Fim Sprint</label>
+                            <input type="date" id="filterSprintEnd" onchange="renderTasks()" class="text-xs p-1 border rounded-md outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Busca -->
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Busca Rápida</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="searchTerm" oninput="renderTasks()" placeholder="Título ou responsável..." class="text-xs p-2 border rounded-md min-w-[180px] outline-none">
+                            <button onclick="clearFilters()" class="bg-slate-200 hover:bg-slate-300 text-slate-600 px-3 py-2 rounded-md text-[10px] font-bold uppercase transition-all">Limpar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-3">
+                    <span id="showingCount" class="text-[10px] font-bold text-slate-400 uppercase">Exibindo 0 atividades</span>
+                    <button onclick="downloadPDF()" class="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        ⬇ BAIXAR PDF
+                    </button>
+                </div>
+            </div>
+
+            <div class="card overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table id="taskTable" class="w-full text-left border-collapse" style="table-layout:fixed;">
+                        <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
+                            <tr>
+                                <th class="py-4 px-2" style="width:28px;"></th>
+                                <th class="py-4 px-4 sortable-th" style="width:140px;" onclick="setSortColumn('project')">Empreendimento<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 sortable-th" style="width:340px;" onclick="setSortColumn('title')">Atividade & Histórico<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 sortable-th" style="width:130px;" onclick="setSortColumn('owner')">Responsável<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 text-rose-500" style="width:170px;">Problemas<div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 text-indigo-500" style="width:170px;">Próximos Passos<div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 sortable-th" style="width:100px;" onclick="setSortColumn('deadline')">Prazo Atual<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 text-amber-600" style="width:130px;">Expectativas Ant.<div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 sortable-th" style="width:90px;" onclick="setSortColumn('status')">Status<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-4 px-4 text-right" style="width:150px;">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="taskTableBody" class="text-sm divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <section id="tab-content-analise" class="hidden space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div onclick="filterFromDash('all')" class="dash-card bg-indigo-50 border-indigo-100 text-indigo-900">
+                    <div class="icon-box bg-indigo-600 text-white">Σ</div>
+                    <p class="text-[9px] font-black uppercase opacity-60">Total Geral</p>
+                    <p id="statTotal" class="text-3xl font-black">0</p>
+                </div>
+                <div onclick="filterFromDash('pendente')" class="dash-card bg-slate-100 border-slate-200 text-slate-700">
+                    <div class="icon-box bg-slate-500 text-white">○</div>
+                    <p class="text-[9px] font-black uppercase opacity-60">Pendentes</p>
+                    <p id="statPendente" class="text-3xl font-black">0</p>
+                </div>
+                <div onclick="filterFromDash('andamento')" class="dash-card bg-amber-50 border-amber-100 text-amber-900">
+                    <div class="icon-box bg-amber-500 text-white">▶</div>
+                    <p class="text-[9px] font-black uppercase opacity-60">Em Andamento</p>
+                    <p id="statAndamento" class="text-3xl font-black">0</p>
+                </div>
+                <div onclick="filterFromDash('concluido')" class="dash-card bg-emerald-50 border-emerald-100 text-emerald-900">
+                    <div class="icon-box bg-emerald-500 text-white">✓</div>
+                    <p class="text-[9px] font-black uppercase opacity-60">Concluídas</p>
+                    <p id="statConcluido" class="text-3xl font-black">0</p>
+                </div>
+                <div onclick="filterFromDash('atraso')" class="dash-card bg-rose-50 border-rose-100 text-rose-900">
+                    <div class="icon-box bg-rose-600 text-white">!</div>
+                    <p class="text-[9px] font-black uppercase opacity-60">Atrasadas</p>
+                    <p id="statAtraso" class="text-3xl font-black">0</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="card p-6 lg:col-span-1">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 mb-6 tracking-widest">Distribuição por Status</h3>
+                    <div class="h-[280px] flex items-center justify-center">
+                        <canvas id="chartStatusGeral"></canvas>
+                    </div>
+                </div>
+                <div class="card overflow-hidden lg:col-span-2">
+                    <div class="p-4 border-b border-slate-100">
+                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">Resumo por Empreendimento</h3>
+                    </div>
+                    <div class="overflow-x-auto max-h-[300px]">
+                        <table class="w-full text-left text-sm">
+                            <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-400 sticky top-0">
+                                <tr>
+                                    <th class="p-4">Projeto</th>
+                                    <th class="p-4 text-center">Total</th>
+                                    <th class="p-4 text-center">Andamento</th>
+                                    <th class="p-4 text-center">Concluído</th>
+                                    <th class="p-4 text-right">Progresso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="projectSummaryBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="card overflow-hidden border-rose-200">
+                    <div class="p-4 bg-rose-50 border-b border-rose-100 flex justify-between items-center">
+                        <h3 class="text-[10px] font-black uppercase text-rose-700 tracking-widest flex items-center gap-2">
+                            🚨 Atividades Críticas (Atrasadas)
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] font-bold text-rose-400 uppercase">Ver:</label>
+                            <input type="number" id="limitCriticas" value="5" min="1" onchange="updateCharts()" class="w-12 p-1 text-[10px] border rounded outline-none">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-400">
+                                <tr>
+                                    <th class="p-3">Atividade</th>
+                                    <th class="p-3">Projeto</th>
+                                    <th class="p-3 text-center text-rose-600">Atraso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableCriticasBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card overflow-hidden border-indigo-200">
+                    <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+                        <h3 class="text-[10px] font-black uppercase text-indigo-700 tracking-widest flex items-center gap-2">
+                            ⏳ Próximas Atividades a Vencer
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] font-bold text-indigo-400 uppercase">Ver:</label>
+                            <input type="number" id="limitProximas" value="5" min="1" onchange="updateCharts()" class="w-12 p-1 text-[10px] border rounded outline-none">
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-400">
+                                <tr>
+                                    <th class="p-3">Atividade</th>
+                                    <th class="p-3">Responsável</th>
+                                    <th class="p-3">Prazo</th>
+                                    <th class="p-3 text-center text-indigo-600">Faltam</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tableProximasBody" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARGA POR RESPONSÁVEL -->
+            <div class="card overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">👤 Carga por Responsável</h3>
+                        <p class="text-[9px] text-slate-400 mt-0.5">Atividades em aberto por pessoa. Exclui concluídas.</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase">Empreendimento:</label>
+                        <select id="ownerChartProjFilter" onchange="renderOwnerChart()" class="text-xs border rounded-md p-1 outline-none">
+                            <option value="all">Todos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="p-4" id="ownerChartContainer">
+                    <div class="text-center text-slate-400 text-xs py-4">Carregando...</div>
+                </div>
+            </div>
+
+            <!-- GANTT LEVE -->
+            <div class="card overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">📅 Linha do Tempo (Gantt)</h3>
+                        <p class="text-[9px] text-slate-400 mt-0.5">Atividades com data de início e prazo. Clique numa barra para editar.</p>
+                    </div>
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Empreendimento:</label>
+                            <select id="ganttProjFilter" onchange="renderGantt()" class="text-xs border rounded-md p-1 outline-none">
+                                <option value="all">Todos</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Responsável:</label>
+                            <select id="ganttOwnerFilter" onchange="renderGantt()" class="text-xs border rounded-md p-1 outline-none">
+                                <option value="all">Todos</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <label class="text-[9px] font-bold text-slate-400 uppercase">Período:</label>
+                            <select id="ganttRange" onchange="renderGantt()" class="text-xs border rounded-md p-1 outline-none">
+                                <option value="3">3 meses</option>
+                                <option value="6" selected>6 meses</option>
+                                <option value="12">12 meses</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center gap-3 text-[9px] font-bold text-slate-400 uppercase">
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-400 inline-block"></span>Andamento</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span>Concluído</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-rose-500 inline-block"></span>Atraso</span>
+                            <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-slate-400 inline-block"></span>Pendente</span>
+                        </div>
+                        <button onclick="exportGanttPNG()" class="flex items-center gap-1 bg-slate-700 hover:bg-slate-900 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-all" title="Exportar Gantt como imagem PNG">
+                            📷 Exportar PNG
+                        </button>
+                    </div>
+                </div>
+                <div id="ganttContainer" class="overflow-x-auto overflow-y-auto max-h-[500px]">
+                    <div id="ganttInner" style="min-width:900px;"></div>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- ══════════════ ABA CONFIGURAÇÕES ══════════════ -->
+    <div id="tab-content-usuarios" class="hidden max-w-[1920px] mx-auto p-6 space-y-6">
+
+        <!-- Grid: Empreendimentos + Setores -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Empreendimentos -->
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-black uppercase text-indigo-900 tracking-tight">🏗️ Empreendimentos</h2>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Cadastre os empreendimentos disponíveis nos cards.</p>
+                    </div>
+                    <button onclick="openConfigModal('empreendimento')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">+ NOVO</button>
+                </div>
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
+                        <tr><th class="py-2 px-3">Nome</th><th class="py-2 px-3 text-right">Ação</th></tr>
+                    </thead>
+                    <tbody id="empreendimentosTableBody" class="divide-y divide-slate-100 bg-white text-sm"></tbody>
+                </table>
+            </div>
+            <!-- Setores -->
+            <div class="card p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <div>
+                        <h2 class="text-base font-black uppercase text-indigo-900 tracking-tight">🏢 Setores</h2>
+                        <p class="text-[10px] text-slate-400 mt-0.5">Cadastre os setores disponíveis nos cards.</p>
+                    </div>
+                    <button onclick="openConfigModal('setor')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">+ NOVO</button>
+                </div>
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
+                        <tr><th class="py-2 px-3">Nome</th><th class="py-2 px-3 text-right">Ação</th></tr>
+                    </thead>
+                    <tbody id="setoresTableBody" class="divide-y divide-slate-100 bg-white text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tabela de Usuários -->
+        <div class="card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <div>
+                    <h2 class="text-base font-black uppercase text-indigo-900 tracking-tight">👥 Gerenciar Usuários / Responsáveis</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">Cadastre os responsáveis aqui. Eles poderão ser selecionados nos cards de atividade.</p>
+                </div>
+                <button onclick="openUserModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2 rounded-lg font-bold text-xs shadow-lg transition-all">+ NOVO USUÁRIO</button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 font-bold tracking-widest">
+                        <tr>
+                            <th class="py-3 px-4">Nome</th>
+                            <th class="py-3 px-4">E-mail</th>
+                            <th class="py-3 px-4">Setor</th>
+                            <th class="py-3 px-4 text-right">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usersTableBody" class="text-sm divide-y divide-slate-100 bg-white"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Painel de Emails Automáticos -->
+        <div class="card p-6">
+            <div class="flex flex-wrap justify-between items-center mb-5 gap-3">
+                <div>
+                    <h2 class="text-base font-black uppercase text-indigo-900 tracking-tight">📧 Emails Automáticos de Lembrete</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                        Disparados automaticamente ao abrir o sistema. 
+                        <span class="text-indigo-500 font-bold">Regras: atividades normais → 1 dia antes. Atrasadas → 3 dias e 1 dia antes.</span>
+                    </p>
+                </div>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <span id="emailScheduleStatus" class="text-[10px] font-bold text-slate-400 uppercase"></span>
+                    <button onclick="toggleAutoEmail()" id="btnAutoEmailToggle"
+                        class="px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2">
+                    </button>
+                    <button onclick="runAutoEmailCheck(true)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        ▶ DISPARAR PENDENTES AGORA
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sub-tabs -->
+            <div class="flex gap-6 border-b border-slate-100 mb-4 text-[11px] font-bold uppercase tracking-widest">
+                <button onclick="switchEmailTab('pendentes')" id="btn-email-pendentes" class="pb-2 border-b-2 border-indigo-500 text-indigo-600">Pendentes</button>
+                <button onclick="switchEmailTab('enviados')" id="btn-email-enviados" class="pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600">Enviados</button>
+            </div>
+
+            <!-- Pendentes -->
+            <div id="email-tab-pendentes">
+                <div id="emailPendentesEmpty" class="hidden py-8 text-center text-slate-400 text-xs">✅ Nenhum email pendente para hoje.</div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs" id="emailPendentesTable">
+                        <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                            <tr>
+                                <th class="py-2 px-3">Atividade</th>
+                                <th class="py-2 px-3">Projeto</th>
+                                <th class="py-2 px-3">Responsável</th>
+                                <th class="py-2 px-3">Prazo</th>
+                                <th class="py-2 px-3">Motivo</th>
+                                <th class="py-2 px-3 text-right">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emailPendentesBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Enviados -->
+            <div id="email-tab-enviados" class="hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-50 text-[9px] uppercase font-bold text-slate-400 border-b border-slate-200">
+                            <tr>
+                                <th class="py-2 px-3">Data/Hora</th>
+                                <th class="py-2 px-3">Atividade</th>
+                                <th class="py-2 px-3">Destinatário</th>
+                                <th class="py-2 px-3">Motivo</th>
+                                <th class="py-2 px-3">Tipo</th>
+                            </tr>
+                        </thead>
+                        <tbody id="emailEnviadosBody" class="divide-y divide-slate-100 bg-white"></tbody>
+                    </table>
+                </div>
+                <div id="emailEnviadosEmpty" class="hidden py-8 text-center text-slate-400 text-xs">Nenhum email enviado ainda.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Config (Empreendimento / Setor) -->
+    <div id="configModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 id="configModalTitle" class="text-base font-black uppercase text-indigo-900">Item</h2>
+                <button onclick="closeConfigModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="configEditId">
+                <input type="hidden" id="configEditType">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Nome *</label>
+                    <input type="text" id="configEditName" class="w-full p-2 border rounded-md text-sm bg-slate-50 font-bold uppercase" placeholder="Ex: BE SÃO PAULO">
+                </div>
+            </div>
+            <div class="p-5 bg-slate-50 border-t flex justify-end gap-3">
+                <button onclick="deleteConfig()" id="btnDeleteConfig" class="mr-auto text-rose-500 font-bold text-[10px] uppercase px-4 hidden">Excluir</button>
+                <button onclick="closeConfigModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancelar</button>
+                <button onclick="saveConfigItem()" class="bg-indigo-600 text-white px-8 py-2 rounded-lg font-black text-xs uppercase">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Usuário -->
+    <div id="userModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 id="userModalTitle" class="text-lg font-black uppercase text-indigo-900">Usuário</h2>
+                <button onclick="closeUserModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <input type="hidden" id="userEditIdx">
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Nome Completo *</label>
+                    <input type="text" id="userEditName" class="w-full p-2 border rounded-md text-sm bg-slate-50 font-bold" placeholder="Ex: João Silva">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">E-mail *</label>
+                    <input type="email" id="userEditEmail" class="w-full p-2 border rounded-md text-sm bg-slate-50" placeholder="joao@empresa.com.br">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Setor / Cargo</label>
+                    <input type="text" id="userEditSector" class="w-full p-2 border rounded-md text-sm bg-slate-50" placeholder="Ex: Engenharia">
+                </div>
+            </div>
+            <div class="p-6 bg-slate-50 border-t flex justify-end gap-3">
+                <button onclick="deleteUser()" id="btnDeleteUser" class="mr-auto text-rose-500 font-bold text-[10px] uppercase px-4 hidden">Excluir</button>
+                <button onclick="closeUserModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancelar</button>
+                <button onclick="saveUser()" class="bg-indigo-600 text-white px-8 py-2 rounded-lg font-black text-xs uppercase">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <h2 id="modalTitle" class="text-lg font-black uppercase text-indigo-900">Atividade</h2>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600">✕</button>
+            </div>
+            <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-4 overflow-y-auto max-h-[85vh]">
+                <input type="hidden" id="editIdx">
+                
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Empreendimento</label>
+                    <select id="editProject" class="w-full p-2 border rounded-md text-xs bg-slate-50 uppercase font-bold">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Setor</label>
+                    <select id="editSector" class="w-full p-2 border rounded-md text-xs bg-slate-50 uppercase">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Título da Atividade</label>
+                    <input type="text" id="editTitle" class="w-full p-2 border rounded-md text-sm font-bold bg-slate-50">
+                </div>
+                
+                <div class="md:col-span-2">
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Responsável(eis)</label>
+                    <div class="relative">
+                        <div id="ownerTagsContainer" onclick="document.getElementById('ownerInput').focus()">
+                            <!-- tags injetadas aqui -->
+                            <input type="text" id="ownerInput" placeholder="Digite ou selecione..." autocomplete="off"
+                                oninput="filterOwnerDropdown()" onfocus="showOwnerDropdown()" onkeydown="ownerInputKeydown(event)">
+                        </div>
+                        <div id="ownerDropdown" class="hidden"></div>
+                    </div>
+                    <input type="hidden" id="editOwner">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Status</label>
+                    <select id="editStatus" class="w-full p-2 border rounded-md text-xs bg-slate-50 font-bold">
+                        <option value="pendente">Pendente</option>
+                        <option value="andamento">Em Andamento</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="atraso">Atraso</option>
+                    </select>
+                </div>
+                <div class="flex items-center">
+                    <label class="flex items-center gap-3 cursor-pointer bg-orange-50 border border-orange-200 rounded-lg p-3 w-full hover:bg-orange-100 transition-all">
+                        <input type="checkbox" id="editCriticalPath" class="w-4 h-4 accent-orange-500">
+                        <div>
+                            <span class="text-orange-700 font-black text-xs uppercase">⚠ Caminho Crítico</span>
+                            <p class="text-orange-500 text-[10px] mt-0.5">Marca a linha com destaque laranja na tabela.</p>
+                        </div>
+                    </label>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Data Início</label>
+                    <input type="date" id="editStart" class="w-full p-2 border rounded-md text-xs bg-slate-50">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Prazo Final</label>
+                    <div class="flex gap-2">
+                        <input type="date" id="editDeadline" class="flex-1 p-2 border rounded-md text-xs bg-slate-100 font-bold" readonly>
+                        <button id="btnReprogramar" onclick="toggleReprogramar()" class="bg-amber-500 hover:bg-amber-600 text-white px-2 py-1 rounded text-[9px] font-bold uppercase">Reprogramar</button>
+                    </div>
+                </div>
+
+                <div id="reprogramarSection" class="md:col-span-2 hidden bg-amber-50 p-4 rounded-xl border border-amber-200">
+                    <h4 class="text-amber-800 font-black text-[10px] uppercase mb-3">⚠️ Reprogramação</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                        <input type="date" id="newDeadline" class="p-2 border rounded-md text-xs">
+                        <textarea id="reproReason" rows="1" class="p-2 border rounded-md text-xs" placeholder="Motivo da mudança..."></textarea>
+                    </div>
+                    <label class="flex items-center gap-3 cursor-pointer bg-rose-50 border border-rose-200 rounded-lg p-3 hover:bg-rose-100 transition-all">
+                        <input type="checkbox" id="reproIsAtraso" class="w-4 h-4 accent-rose-600">
+                        <div>
+                            <span class="text-rose-700 font-black text-xs uppercase">⚠ Atividade está atrasada?</span>
+                            <p class="text-rose-500 text-[10px] mt-0.5">Se marcado, o status vira ATRASO e o sistema calculará os dias de atraso a partir do prazo original desta reprogramação.</p>
+                        </div>
+                    </label>
+                </div>
+
+                <div class="md:col-span-2">
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Expectativas Anteriores (Editável)</label>
+                    <input type="text" id="editOldExpectations" class="w-full p-2 border rounded-md text-xs bg-slate-50 text-slate-500" placeholder="Ex: 10/05/2024; 20/05/2024">
+                </div>
+
+                <div class="md:col-span-2 bg-indigo-50/50 p-4 rounded-xl border border-indigo-100 mt-2">
+                    <div class="flex justify-between items-center mb-3">
+                        <label class="block text-[10px] font-black text-indigo-900 uppercase tracking-tighter">Histórico de Avanços (Sprints)</label>
+                        <button onclick="addHistoryLine()" class="bg-indigo-600 text-white px-3 py-1 rounded text-[10px] font-bold">+ REGISTRAR SEMANA</button>
+                    </div>
+                    <div id="historyContainer" class="space-y-2 max-h-40 overflow-y-auto pr-2"></div>
+                </div>
+
+                <div>
+                    <label class="block text-[9px] font-bold text-rose-400 uppercase">Problemas / Impedimentos</label>
+                    <textarea id="editProblems" rows="2" class="w-full p-2 border rounded-md text-xs bg-rose-50/30"></textarea>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold text-indigo-500 uppercase">Próximos Passos</label>
+                    <textarea id="editNextSteps" rows="2" class="w-full p-2 border rounded-md text-xs bg-indigo-50/30"></textarea>
+                </div>
+            </div>
+
+            <div class="p-6 bg-slate-50 border-t flex justify-end gap-3">
+                <button onclick="deleteTask()" id="btnDelete" class="mr-auto text-rose-500 font-bold text-[10px] uppercase px-4 hidden">Excluir</button>
+                <button onclick="closeModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancelar</button>
+                <button onclick="saveTask()" id="btnSave" class="bg-indigo-600 text-white px-8 py-2 rounded-lg font-black text-xs uppercase">Salvar Atividade</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let chartGeral;
+        window.tasks = [];
+        const TODAY = new Date();
+        const TODAY_ISO = TODAY.toISOString().split('T')[0];
+
+        // ══════════════════════════════════════════════════════
+        // SORT STATE
+        // ══════════════════════════════════════════════════════
+        window.sortColumn = null;   // 'project' | 'title' | 'owner' | 'deadline' | 'status'
+        window.sortDir    = 'asc';  // 'asc' | 'desc'
+
+        function setSortColumn(col) {
+            if (window.sortColumn === col) {
+                // Mesmo coluna: alterna asc → desc → null (volta para ordem manual)
+                if (window.sortDir === 'asc') window.sortDir = 'desc';
+                else { window.sortColumn = null; window.sortDir = 'asc'; }
+            } else {
+                window.sortColumn = col;
+                window.sortDir = 'asc';
+            }
+            updateSortIndicators();
+            renderTasks();
+        }
+
+        function updateSortIndicators() {
+            document.querySelectorAll('.sortable-th').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+                // Match column by onclick attribute
+                const onclick = th.getAttribute('onclick') || '';
+                const match = onclick.match(/setSortColumn\('(\w+)'\)/);
+                if (match && match[1] === window.sortColumn) {
+                    th.classList.add(window.sortDir === 'asc' ? 'sort-asc' : 'sort-desc');
+                }
+            });
+        }
+
+        function applyColumnSort(tasks) {
+            if (!window.sortColumn) return tasks;
+            const col = window.sortColumn;
+            const dir = window.sortDir === 'asc' ? 1 : -1;
+            return [...tasks].sort((a, b) => {
+                let va, vb;
+                if (col === 'deadline') {
+                    va = a.deadline || '9999-99-99';
+                    vb = b.deadline || '9999-99-99';
+                } else if (col === 'owner') {
+                    va = (Array.isArray(a.owners) && a.owners.length ? a.owners[0] : a.owner) || '';
+                    vb = (Array.isArray(b.owners) && b.owners.length ? b.owners[0] : b.owner) || '';
+                } else {
+                    va = (a[col] || '').toString().toLowerCase();
+                    vb = (b[col] || '').toString().toLowerCase();
+                }
+                if (va < vb) return -1 * dir;
+                if (va > vb) return  1 * dir;
+                return 0;
+            });
+        }
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // MULTI-SELECT FILTERS
+        // ══════════════════════════════════════════════════════
+        window.activeProjFilters = new Set(['all']);
+        window.activeStatFilters = new Set(['all']);
+        window.activeOwnerFilters = new Set(['all']);
+
+        function toggleDropdown(id) {
+            ['projFilterDropdown','statFilterDropdown','ownerFilterDropdown'].forEach(d => {
+                if (d !== id) document.getElementById(d)?.classList.add('hidden');
+            });
+            document.getElementById(id)?.classList.toggle('hidden');
+        }
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#btnProjFilter') && !e.target.closest('#projFilterDropdown'))
+                document.getElementById('projFilterDropdown')?.classList.add('hidden');
+            if (!e.target.closest('#btnStatFilter') && !e.target.closest('#statFilterDropdown'))
+                document.getElementById('statFilterDropdown')?.classList.add('hidden');
+            if (!e.target.closest('#btnOwnerFilter') && !e.target.closest('#ownerFilterDropdown'))
+                document.getElementById('ownerFilterDropdown')?.classList.add('hidden');
+        });
+
+        function onProjCbChange(cb) {
+            const all = document.querySelectorAll('.proj-cb');
+            if (cb.value === 'all') {
+                all.forEach(c => { if (c.value !== 'all') c.checked = false; });
+                window.activeProjFilters = new Set(['all']);
+            } else {
+                document.querySelector('.proj-cb[value="all"]').checked = false;
+                const checked = [...all].filter(c => c.checked && c.value !== 'all').map(c => c.value);
+                window.activeProjFilters = checked.length ? new Set(checked) : new Set(['all']);
+                if (!checked.length) document.querySelector('.proj-cb[value="all"]').checked = true;
+            }
+            document.getElementById('labelProjFilter').innerText =
+                window.activeProjFilters.has('all') ? 'Todos' : [...window.activeProjFilters].join(', ').substring(0,22) + ([...window.activeProjFilters].join(', ').length > 22 ? '…' : '');
+            renderTasks();
+        }
+
+        function onStatCbChange(cb) {
+            const all = document.querySelectorAll('.stat-cb');
+            if (cb.value === 'all') {
+                all.forEach(c => { if (c.value !== 'all') c.checked = false; });
+                window.activeStatFilters = new Set(['all']);
+            } else {
+                document.querySelector('.stat-cb[value="all"]').checked = false;
+                const checked = [...all].filter(c => c.checked && c.value !== 'all').map(c => c.value);
+                window.activeStatFilters = checked.length ? new Set(checked) : new Set(['all']);
+                if (!checked.length) document.querySelector('.stat-cb[value="all"]').checked = true;
+            }
+            document.getElementById('labelStatFilter').innerText =
+                window.activeStatFilters.has('all') ? 'Todos' : [...window.activeStatFilters].map(s => s.charAt(0).toUpperCase()+s.slice(1)).join(', ');
+            renderTasks();
+        }
+
+        function onOwnerCbChange(cb) {
+            const all = document.querySelectorAll('.owner-cb');
+            if (cb.value === 'all') {
+                all.forEach(c => { if (c.value !== 'all') c.checked = false; });
+                window.activeOwnerFilters = new Set(['all']);
+            } else {
+                document.querySelector('.owner-cb[value="all"]').checked = false;
+                const checked = [...all].filter(c => c.checked && c.value !== 'all').map(c => c.value);
+                window.activeOwnerFilters = checked.length ? new Set(checked) : new Set(['all']);
+                if (!checked.length) document.querySelector('.owner-cb[value="all"]').checked = true;
+            }
+            const label = window.activeOwnerFilters.has('all') ? 'Todos'
+                : [...window.activeOwnerFilters].join(', ').substring(0,22) + ([...window.activeOwnerFilters].join(', ').length > 22 ? '…' : '');
+            document.getElementById('labelOwnerFilter').innerText = label;
+            renderTasks();
+        }
+
+        function filterFromDash(status) {
+            // Reseta e aplica só o status clicado
+            document.querySelectorAll('.stat-cb').forEach(c => c.checked = false);
+            if (status === 'all') {
+                document.querySelector('.stat-cb[value="all"]').checked = true;
+                window.activeStatFilters = new Set(['all']);
+                document.getElementById('labelStatFilter').innerText = 'Todos';
+            } else {
+                document.querySelector(`.stat-cb[value="${status}"]`).checked = true;
+                window.activeStatFilters = new Set([status]);
+                document.getElementById('labelStatFilter').innerText = status.charAt(0).toUpperCase()+status.slice(1);
+            }
+            switchTab('lista');
+            renderTasks();
+        }
+
+        function clearFilters() {
+            window.activeProjFilters = new Set(['all']);
+            window.activeStatFilters = new Set(['all']);
+            window.activeOwnerFilters = new Set(['all']);
+            document.querySelectorAll('.proj-cb').forEach(c => c.checked = c.value === 'all');
+            document.querySelectorAll('.stat-cb').forEach(c => c.checked = c.value === 'all');
+            document.querySelectorAll('.owner-cb').forEach(c => c.checked = c.value === 'all');
+            document.getElementById('labelProjFilter').innerText = 'Todos';
+            document.getElementById('labelStatFilter').innerText = 'Todos';
+            document.getElementById('labelOwnerFilter').innerText = 'Todos';
+            document.getElementById('filterSprintStart').value = '';
+            document.getElementById('filterSprintEnd').value = '';
+            document.getElementById('searchTerm').value = '';
+            renderTasks();
+        }
+        // ══════════════════════════════════════════════════════
+
+        function switchTab(tab) {
+            document.getElementById('tab-content-lista').classList.toggle('hidden', tab !== 'lista');
+            document.getElementById('tab-content-analise').classList.toggle('hidden', tab !== 'analise');
+            document.getElementById('tab-content-usuarios').classList.toggle('hidden', tab !== 'usuarios');
+            document.getElementById('btn-tab-lista').className = tab === 'lista' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
+            document.getElementById('btn-tab-analise').className = tab === 'analise' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
+            document.getElementById('btn-tab-usuarios').className = tab === 'usuarios' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
+            updateAtrasoBadge(); // mantém os badges após trocar de aba
+            if(tab === 'analise') { updateCharts(); renderGantt(); renderOwnerChart(); }
+        }
+
+        function toggleDarkMode() {
+            const isDark = document.body.classList.toggle('dark');
+            localStorage.setItem('pde_dark', isDark ? '1' : '0');
+            document.getElementById('btnDark').innerText = isDark ? '☀️' : '🌙';
+        }
+        // Restaurar dark mode
+        if (localStorage.getItem('pde_dark') === '1') {
+            document.body.classList.add('dark');
+            document.addEventListener('DOMContentLoaded', () => {
+                const btn = document.getElementById('btnDark');
+                if (btn) btn.innerText = '☀️';
+            });
+        }
+
+        function toggleReprogramar() { document.getElementById('reprogramarSection').classList.toggle('hidden'); }
+
+        function addHistoryLine(date = '', text = '') {
+            const container = document.getElementById('historyContainer');
+            const div = document.createElement('div');
+            div.className = "flex gap-2 items-start history-item bg-white p-1 rounded border shadow-sm";
+            div.innerHTML = `
+                <input type="date" value="${date}" class="hist-date p-1 border-none text-[10px] w-28 outline-none">
+                <input type="text" value="${text}" placeholder="Avanço..." class="hist-text flex-1 p-1 border-none text-[11px] outline-none">
+                <button onclick="this.parentElement.remove()" class="text-rose-300 hover:text-rose-500 px-2">✕</button>
+            `;
+            container.prepend(div);
+        }
+
+        function getHistoryData() {
+            const items = document.querySelectorAll('.history-item');
+            const data = [];
+            items.forEach(item => {
+                const date = item.querySelector('.hist-date').value;
+                const text = item.querySelector('.hist-text').value;
+                if(date || text) data.push({ date, text });
+            });
+            return JSON.stringify(data);
+        }
+
+        function renderHistoryInTable(jsonStr, taskId) {
+            try {
+                let data = JSON.parse(jsonStr || '[]');
+                const startF = document.getElementById('filterSprintStart').value;
+                const endF = document.getElementById('filterSprintEnd').value;
+                if(startF || endF) data = data.filter(h => !h.date || ( (!startF || h.date >= startF) && (!endF || h.date <= endF) ));
+                if (data.length === 0) return '';
+                data.sort((a,b) => new Date(b.date) - new Date(a.date));
+                const escapedJson = encodeURIComponent(jsonStr || '[]');
+                const uid = 'hist_' + taskId;
+                const hasExtra = data.length > 2;
+
+                let html = `<div class="mt-2 border-l-2 border-indigo-200 pl-3 hist-collapsed" id="${uid}">
+                    <div class="flex items-center gap-1 mb-1">
+                        <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest">Histórico</span>
+                        <button class="btn-zoom-hist" title="Abrir histórico completo" onclick="openHistoryWindow(decodeURIComponent('${escapedJson}'), event)">⤢</button>
+                    </div>`;
+
+                data.forEach((h, i) => {
+                    const d = h.date ? h.date.split('-').reverse().join('/') : '--/--';
+                    const extraClass = i >= 2 ? 'hist-extra' : '';
+                    html += `<div class="text-[10px] leading-tight mb-1 ${extraClass}"><span class="font-black text-indigo-500 mr-1">${d}:</span> <span class="text-slate-600">${h.text}</span></div>`;
+                });
+
+                if (hasExtra) {
+                    html += `<button class="btn-toggle-hist" onclick="toggleHistory('${uid}', this)">
+                        ▼ Ver todos (${data.length})
+                    </button>`;
+                }
+
+                return html + `</div>`;
+            } catch(e) { return ''; }
+        }
+
+        function toggleHistory(uid, btn) {
+            const el = document.getElementById(uid);
+            const collapsed = el.classList.toggle('hist-collapsed');
+            const total = el.querySelectorAll('.hist-extra').length + 2;
+            btn.innerHTML = collapsed ? `▼ Ver todos (${total})` : `▲ Minimizar`;
+        }
+
+        function openHistoryWindow(jsonStr, event) {
+            event.stopPropagation();
+            try {
+                const data = JSON.parse(jsonStr || '[]');
+                data.sort((a,b) => new Date(b.date) - new Date(a.date));
+                let rows = '';
+                data.forEach(h => {
+                    const d = h.date ? h.date.split('-').reverse().join('/') : '--/--';
+                    rows += `<tr style="border-bottom:1px solid #e2e8f0;">
+                        <td style="padding:10px 16px;font-weight:900;color:#4f46e5;white-space:nowrap;font-size:13px;">${d}</td>
+                        <td style="padding:10px 16px;color:#334155;font-size:13px;line-height:1.5;">${h.text}</td>
+                    </tr>`;
+                });
+                const html = `<!DOCTYPE html><html lang="pt-br"><head><meta charset="UTF-8">
+                    <title>Histórico Completo</title>
+                    <style>
+                        body{font-family:'Segoe UI',sans-serif;background:#f1f5f9;margin:0;padding:24px;}
+                        h2{color:#1e1b4b;font-size:18px;margin-bottom:16px;font-weight:900;letter-spacing:-0.5px;border-bottom:3px solid #4f46e5;padding-bottom:10px;}
+                        table{width:100%;border-collapse:collapse;background:white;border-radius:12px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.07);}
+                        thead{background:#4f46e5;color:white;}
+                        th{padding:12px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:1px;}
+                        tr:hover td{background:#eef2ff;}
+                        @media print{body{background:white;}}
+                    </style>
+                </head><body>
+                    <h2>📋 Histórico de Avanços</h2>
+                    <table><thead><tr><th>Data</th><th>Registro</th></tr></thead><tbody>${rows}</tbody></table>
+                    <p style="margin-top:16px;font-size:10px;color:#94a3b8;text-align:right;">Gerado em ${new Date().toLocaleString('pt-BR')}</p>
+                </body></html>`;
+                const win = window.open('', '_blank', 'width=760,height=600,resizable=yes,scrollbars=yes');
+                win.document.write(html);
+                win.document.close();
+            } catch(e) { alert('Erro ao abrir histórico.'); }
+        }
+
+        function getOrderedTasks(filtered) {
+            const order = window.taskOrder || [];
+            if (!order.length) return filtered;
+            const idxMap = {};
+            order.forEach((id, i) => idxMap[id] = i);
+            return [...filtered].sort((a, b) => {
+                const ai = idxMap[a.id] !== undefined ? idxMap[a.id] : 999999;
+                const bi = idxMap[b.id] !== undefined ? idxMap[b.id] : 999999;
+                return ai - bi;
+            });
+        }
+
+        function calcDiasAtraso(t) {
+            // Atrasada manualmente: conta desde delayStartDate
+            if (t.delayStartDate) {
+                const start = new Date(t.delayStartDate + 'T00:00:00');
+                const hoje = new Date(TODAY_ISO + 'T00:00:00');
+                return Math.max(0, Math.round((hoje - start) / (1000*60*60*24)));
+            }
+            // Atrasada por prazo vencido
+            if (t.deadline) {
+                const prazo = new Date(t.deadline + 'T00:00:00');
+                const hoje = new Date(TODAY_ISO + 'T00:00:00');
+                const diff = Math.round((hoje - prazo) / (1000*60*60*24));
+                return diff > 0 ? diff : 0;
+            }
+            return 0;
+        }
+
+        function renderTasks() {
+            const tbody = document.getElementById('taskTableBody');
+            const projF  = window.activeProjFilters  || new Set(['all']);
+            const statF  = window.activeStatFilters   || new Set(['all']);
+            const ownerF = window.activeOwnerFilters  || new Set(['all']);
+            const search = (document.getElementById('searchTerm').value || '').toLowerCase();
+            const startF = document.getElementById('filterSprintStart').value;
+            const endF   = document.getElementById('filterSprintEnd').value;
+
+            tbody.innerHTML = '';
+
+            // Auto-detect overdue: if deadline passed and status not concluded/already atraso
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+            window.tasks.forEach(t => {
+                if (t.status !== 'concluido' && t.status !== 'atraso' && t.deadline) {
+                    const prazo = new Date(t.deadline + 'T00:00:00');
+                    if (prazo < hoje) t.status = 'atraso';
+                }
+            });
+
+            const filtered = window.tasks.filter(t => {
+                const mP = projF.has('all') || projF.has(t.project);
+                const mS = statF.has('all') || statF.has(t.status);
+                const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
+                const mO = ownerF.has('all') || taskOwners.some(o => ownerF.has(o));
+                const mSearch = !search
+                    || (t.title||'').toLowerCase().includes(search)
+                    || (t.owner||'').toLowerCase().includes(search)
+                    || (t.project||'').toLowerCase().includes(search)
+                    || (t.sector||'').toLowerCase().includes(search)
+                    || (Array.isArray(t.owners) ? t.owners.join(' ') : '').toLowerCase().includes(search);
+                return mP && mS && mO && mSearch;
+            });
+
+            const ordered = window.sortColumn
+                ? applyColumnSort(filtered)
+                : getOrderedTasks(filtered);
+
+            // Separador "vence essa semana"
+            const emSeteDias = new Date(hoje);
+            emSeteDias.setDate(emSeteDias.getDate() + 7);
+            let weekSepInserted = false;
+
+            ordered.forEach(t => {
+                // Inserir separador antes da 1ª atividade que vence nos próximos 7 dias
+                if (!weekSepInserted && t.deadline && t.status !== 'concluido') {
+                    const prazo = new Date(t.deadline + 'T00:00:00');
+                    if (prazo >= hoje && prazo <= emSeteDias) {
+                        const sepRow = document.createElement('tr');
+                        sepRow.innerHTML = `<td colspan="10" style="padding:4px 12px 2px;background:#fffbeb;border-top:2px dashed #f59e0b;">
+                            <span style="font-size:8px;font-weight:900;color:#f59e0b;text-transform:uppercase;letter-spacing:0.06em;">⏰ Vence essa semana</span>
+                        </td>`;
+                        tbody.appendChild(sepRow);
+                        weekSepInserted = true;
+                    }
+                }
+
+                const diasAtraso = t.status === 'atraso' ? calcDiasAtraso(t) : 0;
+                const atrasoTag = diasAtraso > 0
+                    ? `<span class="ml-1 text-[9px] font-black text-rose-600 bg-rose-100 px-1.5 py-0.5 rounded">+${diasAtraso}d atraso</span>` : '';
+                const criticalBadge = t.criticalPath ? `<span class="critical-badge">⚡ Crítico</span>` : '';
+
+                // Destaque de busca
+                const titleHl    = search ? highlightSearch(t.title, search) : (t.title || '');
+                const projectHl  = search ? highlightSearch(t.project, search) : (t.project || '');
+                const sectorHl   = search ? highlightSearch(t.sector || '-', search) : (t.sector || '-');
+                const ownersText = Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner||'-');
+                const ownersHl   = search ? highlightSearch(ownersText, search) : ownersText;
+
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-slate-50 transition-all group' + (t.criticalPath ? ' critical-path' : '');
+                row.dataset.taskId = t.id;
+                row.draggable = true;
+                row.innerHTML = `
+                    <td class="py-3 px-2 align-top text-center">
+                        <span class="drag-handle" title="Arrastar para reordenar">⠿</span>
+                    </td>
+                    <td class="py-4 px-4 align-top uppercase" style="overflow:hidden;">
+                        <div class="text-[10px] font-black text-indigo-600 mb-1">${projectHl}</div>
+                        <div class="text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-sm inline-block">${sectorHl}</div>
+                    </td>
+                    <td class="py-4 px-4 align-top" style="overflow:hidden;">
+                        <div class="font-bold text-slate-800 leading-tight">${titleHl}${atrasoTag}${criticalBadge}</div>
+                        ${t.updatedBy && t.updatedAt ? `<div class="text-[9px] text-slate-300 mt-0.5">✎ ${t.updatedBy} · ${new Date(t.updatedAt).toLocaleDateString('pt-BR')}</div>` : ''}
+                        ${renderHistoryInTable(t.notes, t.id)}
+                    </td>
+                    <td class="py-4 px-4 align-top font-semibold text-slate-600" style="overflow:hidden;">${ownersHl}</td>
+                    <td class="py-4 px-4 align-top text-rose-600 text-[10px] italic" style="overflow:hidden;">${t.problems || '-'}</td>
+                    <td class="py-4 px-4 align-top text-indigo-700 text-[10px] font-medium" style="overflow:hidden;">${t.nextSteps || '-'}</td>
+                    <td class="py-4 px-4 align-top font-bold text-slate-900" style="overflow:hidden;">${t.deadline ? t.deadline.split('-').reverse().join('/') : '-'}</td>
+                    <td class="py-4 px-4 align-top text-amber-600 text-[10px] font-mono" style="overflow:hidden;">${t.oldExpectations || '-'}</td>
+                    <td class="py-4 px-4 align-top" style="overflow:hidden;"><span class="status-badge status-${t.status}">${t.status}</span></td>
+                    <td class="py-4 px-4 align-top text-right">
+                        <div class="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
+                            <button onclick="sendTaskEmail('${t.id}', this)"
+                                title="Enviar e-mail"
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-[10px] font-bold">✉</button>
+                            <button onclick="editTask('${t.id}')" class="bg-slate-800 hover:bg-slate-700 text-white px-3 py-1 rounded text-[10px] font-bold">EDITAR</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('showingCount').innerText = `Exibindo ${ordered.length} atividades`;
+            initDragDrop();
+        }
+
+        function editTask(id) {
+            const t = window.tasks.find(x => String(x.id) === String(id));
+            document.getElementById('editIdx').value = id;
+            document.getElementById('editProject').value = t.project;
+            document.getElementById('editSector').value = t.sector || '';
+            document.getElementById('editTitle').value = t.title;
+            document.getElementById('editStatus').value = t.status;
+            document.getElementById('editStart').value = t.start || '';
+            document.getElementById('editDeadline').value = t.deadline || '';
+            document.getElementById('editOldExpectations').value = t.oldExpectations || '';
+            document.getElementById('editProblems').value = t.problems || '';
+            document.getElementById('editNextSteps').value = t.nextSteps || '';
+            document.getElementById('editCriticalPath').checked = !!t.criticalPath;
+            document.getElementById('reprogramarSection').classList.add('hidden');
+            document.getElementById('newDeadline').value = '';
+            document.getElementById('reproReason').value = '';
+            document.getElementById('reproIsAtraso').checked = false;
+            document.getElementById('btnReprogramar').classList.remove('hidden');
+            document.getElementById('editDeadline').readOnly = true;
+            document.getElementById('historyContainer').innerHTML = '';
+            try { JSON.parse(t.notes || '[]').forEach(h => addHistoryLine(h.date, h.text)); } catch(e) {}
+            // Carrega responsáveis (suporte a string legada e array novo)
+            const owners = Array.isArray(t.owners) ? t.owners : (t.owner ? [t.owner] : []);
+            setSelectedOwners(owners);
+            document.getElementById('modalTitle').innerText = "Editar Atividade";
+            document.getElementById('btnDelete').classList.remove('hidden');
+            document.getElementById('taskModal').classList.replace('hidden', 'flex');
+        }
+
+        function addTask() {
+            document.getElementById('editIdx').value = crypto.randomUUID();
+            document.getElementById('editProject').value = '';
+            document.getElementById('editSector').value = '';
+            document.getElementById('editTitle').value = '';
+            document.getElementById('editStatus').value = 'andamento';
+            document.getElementById('editStart').value = TODAY_ISO;
+            document.getElementById('editDeadline').value = '';
+            document.getElementById('editOldExpectations').value = '';
+            document.getElementById('editProblems').value = '';
+            document.getElementById('editNextSteps').value = '';
+            document.getElementById('editCriticalPath').checked = false;
+            document.getElementById('editDeadline').readOnly = false;
+            document.getElementById('btnReprogramar').classList.add('hidden');
+            document.getElementById('reprogramarSection').classList.add('hidden');
+            document.getElementById('historyContainer').innerHTML = '';
+            setSelectedOwners([]);
+            document.getElementById('modalTitle').innerText = "Nova Atividade";
+            document.getElementById('btnDelete').classList.add('hidden');
+            document.getElementById('taskModal').classList.replace('hidden', 'flex');
+        }
+
+        function closeModal() { document.getElementById('taskModal').classList.replace('flex', 'hidden'); }
+
+        async function deleteTask() {
+            const id = document.getElementById('editIdx').value;
+            const t = window.tasks.find(x => String(x.id) === String(id));
+            const nome = t ? `"${t.title}"` : 'esta atividade';
+            if(confirm(`⚠️ Excluir permanentemente ${nome}?\n\nEssa ação não pode ser desfeita.`)) {
+                await window.deleteFromFirebase(id);
+                closeModal();
+            }
+        }
+
+        async function saveTask() {
+            const btn = document.getElementById('btnSave');
+            let finalDeadline = document.getElementById('editDeadline').value;
+            let finalOldExpectations = document.getElementById('editOldExpectations').value;
+            const newDate = document.getElementById('newDeadline').value;
+            const reason = document.getElementById('reproReason').value;
+            const reproIsAtraso = document.getElementById('reproIsAtraso').checked;
+
+            // Busca tarefa atual para preservar delayStartDate
+            const currentId = document.getElementById('editIdx').value;
+            const currentTask = window.tasks.find(x => String(x.id) === String(currentId)) || {};
+            let delayStartDate = currentTask.delayStartDate || null;
+
+            let finalStatus = document.getElementById('editStatus').value;
+
+            if(!document.getElementById('reprogramarSection').classList.contains('hidden')) {
+                if(!newDate || !reason) return alert("Preencha a nova data e o motivo.");
+                const oldF = finalDeadline.split('-').reverse().join('/');
+                finalOldExpectations = finalOldExpectations ? `${finalOldExpectations}; ${oldF}` : oldF;
+
+                // Se marcou atraso na reprogramação
+                if (reproIsAtraso) {
+                    finalStatus = 'atraso';
+                    // Salva a data ORIGINAL do prazo como referência do atraso (só na primeira vez)
+                    if (!delayStartDate) delayStartDate = finalDeadline;
+                    addHistoryLine(TODAY_ISO, `[REPROG+ATRASO] Prazo alterado de ${oldF} para ${newDate.split('-').reverse().join('/')}. Motivo: ${reason}`);
+                } else {
+                    addHistoryLine(TODAY_ISO, `[REPROG] Alterado de ${oldF} para ${newDate.split('-').reverse().join('/')}. Motivo: ${reason}`);
+                }
+                finalDeadline = newDate;
+            }
+
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+            const selectedOwners = getSelectedOwners();
+            const payload = {
+                id: currentId,
+                project: document.getElementById('editProject').value.toUpperCase(),
+                sector: document.getElementById('editSector').value.toUpperCase(),
+                title: document.getElementById('editTitle').value,
+                owner: selectedOwners.join(', '),
+                owners: selectedOwners,
+                status: finalStatus,
+                start: document.getElementById('editStart').value,
+                deadline: finalDeadline,
+                oldExpectations: finalOldExpectations,
+                problems: document.getElementById('editProblems').value,
+                nextSteps: document.getElementById('editNextSteps').value,
+                notes: getHistoryData(),
+                delayStartDate: delayStartDate || null,
+                criticalPath: document.getElementById('editCriticalPath').checked,
+                updatedAt: Date.now(),
+                updatedBy: window._currentUserName || 'Sistema'
+            };
+            try {
+                await window.saveToFirebase(payload);
+                btn.innerText = "Salvar Atividade";
+                btn.disabled = false;
+                closeModal();
+            } catch(err) {
+                console.error('Erro ao salvar:', err);
+                btn.innerText = "Salvar Atividade";
+                btn.disabled = false;
+                alert('❌ Erro ao salvar. Verifique sua conexão e tente novamente.\n\nDetalhes: ' + err.message);
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // MULTI-SELECT DE RESPONSÁVEIS
+        // ══════════════════════════════════════════════════════
+        window.users = window.users || [];
+        let selectedOwners = [];
+
+        function getSelectedOwners() { return [...selectedOwners]; }
+
+        function setSelectedOwners(names) {
+            selectedOwners = [...names];
+            renderOwnerTags();
+        }
+
+        function renderOwnerTags() {
+            const container = document.getElementById('ownerTagsContainer');
+            if (!container) return;
+            // Remove tags antigas mas mantém o input
+            container.querySelectorAll('.owner-tag').forEach(t => t.remove());
+            const input = document.getElementById('ownerInput');
+            selectedOwners.forEach(name => {
+                const tag = document.createElement('span');
+                tag.className = 'owner-tag';
+                tag.innerHTML = `${name} <button type="button" onclick="removeOwner('${name.replace(/'/g,"\\'")}')">✕</button>`;
+                container.insertBefore(tag, input);
+            });
+            document.getElementById('editOwner').value = selectedOwners.join(', ');
+        }
+
+        function removeOwner(name) {
+            selectedOwners = selectedOwners.filter(o => o !== name);
+            renderOwnerTags();
+        }
+
+        function addOwner(name) {
+            if (!name || selectedOwners.includes(name)) return;
+            selectedOwners.push(name);
+            renderOwnerTags();
+            document.getElementById('ownerInput').value = '';
+            hideOwnerDropdown();
+        }
+
+        function showOwnerDropdown() {
+            filterOwnerDropdown();
+            document.getElementById('ownerDropdown').classList.remove('hidden');
+        }
+
+        function hideOwnerDropdown() {
+            setTimeout(() => document.getElementById('ownerDropdown').classList.add('hidden'), 180);
+        }
+
+        function filterOwnerDropdown() {
+            const q = (document.getElementById('ownerInput').value || '').toLowerCase();
+            const dd = document.getElementById('ownerDropdown');
+            const list = (window.users || []).filter(u => u.name && u.name.toLowerCase().includes(q));
+            if (list.length === 0) { dd.classList.add('hidden'); return; }
+            dd.innerHTML = list.map(u => {
+                const sel = selectedOwners.includes(u.name) ? 'selected' : '';
+                return `<div class="owner-option ${sel}" onmousedown="addOwner('${u.name.replace(/'/g,"\\'")}')">${u.name} <span style="color:#94a3b8;font-weight:400;margin-left:6px;">${u.email||''}</span></div>`;
+            }).join('');
+            dd.classList.remove('hidden');
+        }
+
+        function ownerInputKeydown(e) {
+            if (e.key === 'Enter' || e.key === ',') {
+                e.preventDefault();
+                const val = document.getElementById('ownerInput').value.trim();
+                if (val) addOwner(val);
+            } else if (e.key === 'Escape') {
+                hideOwnerDropdown();
+            }
+        }
+
+        function updateOwnerSelect() { /* chamado quando users muda — nada a fazer aqui, dropdown é dinâmico */ }
+
+        // ══════════════════════════════════════════════════════
+        // CRUD DE USUÁRIOS
+        // ══════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════
+        // CRUD DE CONFIGURAÇÕES (EMPREENDIMENTOS / SETORES)
+        // ══════════════════════════════════════════════════════
+        window.configs = { empreendimentos: [], setores: [] };
+
+        function renderConfigsTable() {
+            const cfg = window.configs;
+
+            const empBody = document.getElementById('empreendimentosTableBody');
+            if (empBody) {
+                empBody.innerHTML = cfg.empreendimentos.length === 0
+                    ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhum empreendimento cadastrado.</td></tr>`
+                    : cfg.empreendimentos.map(e => `
+                        <tr class="hover:bg-slate-50 group">
+                            <td class="py-2 px-3 font-bold text-indigo-700 uppercase text-xs">${e.name}</td>
+                            <td class="py-2 px-3 text-right">
+                                <button onclick="openConfigModal('empreendimento', '${e.id}')" class="opacity-0 group-hover:opacity-100 bg-slate-700 text-white px-3 py-1 rounded text-[9px] font-bold">EDITAR</button>
+                            </td>
+                        </tr>`).join('');
+            }
+
+            const setBody = document.getElementById('setoresTableBody');
+            if (setBody) {
+                setBody.innerHTML = cfg.setores.length === 0
+                    ? `<tr><td colspan="2" class="p-4 text-center text-slate-400 text-xs">Nenhum setor cadastrado.</td></tr>`
+                    : cfg.setores.map(s => `
+                        <tr class="hover:bg-slate-50 group">
+                            <td class="py-2 px-3 font-bold text-slate-700 uppercase text-xs">${s.name}</td>
+                            <td class="py-2 px-3 text-right">
+                                <button onclick="openConfigModal('setor', '${s.id}')" class="opacity-0 group-hover:opacity-100 bg-slate-700 text-white px-3 py-1 rounded text-[9px] font-bold">EDITAR</button>
+                            </td>
+                        </tr>`).join('');
+            }
+        }
+
+        function openConfigModal(type, id) {
+            const label = type === 'empreendimento' ? 'Empreendimento' : 'Setor';
+            document.getElementById('configModalTitle').innerText = id ? `Editar ${label}` : `Novo ${label}`;
+            document.getElementById('configEditType').value = type;
+            document.getElementById('btnDeleteConfig').classList.toggle('hidden', !id);
+
+            if (id) {
+                const list = type === 'empreendimento' ? window.configs.empreendimentos : window.configs.setores;
+                const item = list.find(x => String(x.id) === String(id));
+                document.getElementById('configEditId').value = item ? item.id : '';
+                document.getElementById('configEditName').value = item ? item.name : '';
+            } else {
+                document.getElementById('configEditId').value = crypto.randomUUID();
+                document.getElementById('configEditName').value = '';
+            }
+            document.getElementById('configModal').classList.replace('hidden', 'flex');
+        }
+
+        function closeConfigModal() {
+            document.getElementById('configModal').classList.replace('flex', 'hidden');
+        }
+
+        async function saveConfigItem() {
+            const name = document.getElementById('configEditName').value.trim().toUpperCase();
+            if (!name) return alert('O nome é obrigatório.');
+            await window.saveConfig({
+                id: parseInt(document.getElementById('configEditId').value),
+                type: document.getElementById('configEditType').value,
+                name
+            });
+            closeConfigModal();
+        }
+
+        async function deleteConfig() {
+            if (confirm('Excluir este item permanentemente?')) {
+                await window.deleteConfig(document.getElementById('configEditId').value);
+                closeConfigModal();
+            }
+        }
+        // ══════════════════════════════════════════════════════
+
+        function renderUsersTable() {
+            const tbody = document.getElementById('usersTableBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+            (window.users || []).forEach(u => {
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-all group">
+                        <td class="py-3 px-4 font-bold text-slate-800">${u.name}</td>
+                        <td class="py-3 px-4 text-slate-500 text-xs">${u.email || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 text-xs">${u.sector || '-'}</td>
+                        <td class="py-3 px-4 text-right">
+                            <button onclick="openUserModal(${u.id})" class="opacity-0 group-hover:opacity-100 bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-bold">EDITAR</button>
+                        </td>
+                    </tr>`;
+            });
+            if ((window.users || []).length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-8 text-center text-slate-400 text-xs">Nenhum usuário cadastrado ainda.</td></tr>`;
+            }
+        }
+
+        function openUserModal(id) {
+            if (id) {
+                const u = window.users.find(x => x.id === id);
+                document.getElementById('userEditIdx').value = u.id;
+                document.getElementById('userEditName').value = u.name;
+                document.getElementById('userEditEmail').value = u.email || '';
+                document.getElementById('userEditSector').value = u.sector || '';
+                document.getElementById('userModalTitle').innerText = 'Editar Usuário';
+                document.getElementById('btnDeleteUser').classList.remove('hidden');
+            } else {
+                document.getElementById('userEditIdx').value = crypto.randomUUID();
+                document.getElementById('userEditName').value = '';
+                document.getElementById('userEditEmail').value = '';
+                document.getElementById('userEditSector').value = '';
+                document.getElementById('userModalTitle').innerText = 'Novo Usuário';
+                document.getElementById('btnDeleteUser').classList.add('hidden');
+            }
+            document.getElementById('userModal').classList.replace('hidden', 'flex');
+        }
+
+        function closeUserModal() { document.getElementById('userModal').classList.replace('flex', 'hidden'); }
+
+        async function saveUser() {
+            const name = document.getElementById('userEditName').value.trim();
+            const email = document.getElementById('userEditEmail').value.trim();
+            if (!name) return alert('O nome é obrigatório.');
+            await window.saveUserToFirebase({
+                id: parseInt(document.getElementById('userEditIdx').value),
+                name,
+                email,
+                sector: document.getElementById('userEditSector').value.trim()
+            });
+            closeUserModal();
+        }
+
+        async function deleteUser() {
+            if (confirm('Excluir este usuário permanentemente?')) {
+                await window.deleteUserFromFirebase(document.getElementById('userEditIdx').value);
+                closeUserModal();
+            }
+        }
+
+        // ══════════════════════════════════════════════════════
+        // DOWNLOAD PDF
+        // ══════════════════════════════════════════════════════
+        function getFilteredTasks() {
+            const projF  = window.activeProjFilters  || new Set(['all']);
+            const statF  = window.activeStatFilters   || new Set(['all']);
+            const ownerF = window.activeOwnerFilters  || new Set(['all']);
+            const search = (document.getElementById('searchTerm').value || '').toLowerCase();
+            return window.tasks.filter(t => {
+                const mP = projF.has('all') || projF.has(t.project);
+                const mS = statF.has('all') || statF.has(t.status);
+                const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
+                const mO = ownerF.has('all') || taskOwners.some(o => ownerF.has(o));
+                const mSearch = !search
+                    || (t.title||'').toLowerCase().includes(search)
+                    || (t.owner||'').toLowerCase().includes(search)
+                    || (t.project||'').toLowerCase().includes(search)
+                    || (t.sector||'').toLowerCase().includes(search)
+                    || (Array.isArray(t.owners) ? t.owners.join(' ') : '').toLowerCase().includes(search);
+                return mP && mS && mO && mSearch;
+            });
+        }
+
+        function getHistoryText(jsonStr) {
+            try {
+                let data = JSON.parse(jsonStr || '[]');
+                const startF = document.getElementById('filterSprintStart').value;
+                const endF = document.getElementById('filterSprintEnd').value;
+                if (startF || endF) data = data.filter(h => !h.date || ((!startF || h.date >= startF) && (!endF || h.date <= endF)));
+                data.sort((a,b) => new Date(b.date) - new Date(a.date));
+                return data.map(h => `${h.date ? h.date.split('-').reverse().join('/') : '--/--'}: ${h.text}`).join('\n');
+            } catch(e) { return ''; }
+        }
+
+        function downloadPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+
+            // Cabeçalho
+            doc.setFillColor(31, 27, 75);
+            doc.rect(0, 0, 297, 18, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('PDE — Processo de Desenvolvimento de Empreendimento', 10, 12);
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Relatório gerado em ${new Date().toLocaleString('pt-BR')}`, 10, 16);
+
+            // Filtros ativos (multi-select)
+            const projF = window.activeProjFilters || new Set(['all']);
+            const statF = window.activeStatFilters  || new Set(['all']);
+            const sprintS = document.getElementById('filterSprintStart').value;
+            const sprintE = document.getElementById('filterSprintEnd').value;
+            const search = document.getElementById('searchTerm').value;
+            const projLabel = projF.has('all') ? '' : [...projF].join(', ');
+            const statLabel = statF.has('all') ? '' : [...statF].join(', ');
+            const filtrosAtivos = [
+                projLabel ? `Projeto: ${projLabel}` : '',
+                statLabel ? `Status: ${statLabel}` : '',
+                sprintS ? `Sprint início: ${sprintS.split('-').reverse().join('/')}` : '',
+                sprintE ? `Sprint fim: ${sprintE.split('-').reverse().join('/')}` : '',
+                search ? `Busca: "${search}"` : ''
+            ].filter(Boolean);
+
+            doc.setTextColor(31, 27, 75);
+            doc.setFontSize(7);
+            if (filtrosAtivos.length > 0) {
+                doc.text(`Filtros: ${filtrosAtivos.join('  |  ')}`, 10, 23);
+            }
+
+            const tasks = getFilteredTasks();
+
+            const body = tasks.map(t => [
+                `${t.project}\n${t.sector || ''}`,
+                t.title || '',
+                (Array.isArray(t.owners) ? t.owners.join(', ') : t.owner) || '',
+                t.problems || '',
+                t.nextSteps || '',
+                t.deadline ? t.deadline.split('-').reverse().join('/') : '',
+                t.oldExpectations || '',
+                t.status ? t.status.toUpperCase() : '',
+                getHistoryText(t.notes)
+            ]);
+
+            doc.autoTable({
+                startY: filtrosAtivos.length > 0 ? 27 : 22,
+                head: [[
+                    'Empreendimento', 'Atividade', 'Responsável(eis)',
+                    'Problemas', 'Próximos Passos', 'Prazo', 'Expect. Ant.', 'Status', 'Histórico'
+                ]],
+                body,
+                styles: { fontSize: 6.5, cellPadding: 2.5, overflow: 'linebreak', valign: 'top' },
+                headStyles: { fillColor: [79, 70, 229], textColor: 255, fontStyle: 'bold', fontSize: 7 },
+                columnStyles: {
+                    0: { cellWidth: 28 },
+                    1: { cellWidth: 42 },
+                    2: { cellWidth: 28 },
+                    3: { cellWidth: 28 },
+                    4: { cellWidth: 28 },
+                    5: { cellWidth: 18 },
+                    6: { cellWidth: 20 },
+                    7: { cellWidth: 16 },
+                    8: { cellWidth: 'auto' }
+                },
+                alternateRowStyles: { fillColor: [241, 245, 249] },
+                didParseCell: function(data) {
+                    if (data.section === 'body' && data.column.index === 7) {
+                        const s = (data.cell.raw || '').toLowerCase();
+                        if (s === 'atraso') data.cell.styles.textColor = [153, 27, 27];
+                        else if (s === 'concluido') data.cell.styles.textColor = [30, 64, 175];
+                        else if (s === 'andamento') data.cell.styles.textColor = [22, 101, 52];
+                    }
+                }
+            });
+
+            // Rodapé com número de página
+            const pageCount = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= pageCount; i++) {
+                doc.setPage(i);
+                doc.setFontSize(7);
+                doc.setTextColor(148, 163, 184);
+                doc.text(`Página ${i} de ${pageCount}  —  Total: ${tasks.length} atividades`, 10, doc.internal.pageSize.height - 5);
+            }
+
+            const dateStr = new Date().toISOString().slice(0,10);
+            doc.save(`PDE-Relatorio-${dateStr}.pdf`);
+        }
+
+        // ══════════════════════════════════════════════════════
+        // ENVIO DE EMAIL VIA EMAILJS
+        // ══════════════════════════════════════════════════════
+        async function sendTaskEmail(taskId, btnEl) {
+            const t = window.tasks.find(x => String(x.id) === String(taskId));
+            if (!t) return;
+
+            const owners = Array.isArray(t.owners) ? t.owners : (t.owner ? [t.owner] : []);
+            if (owners.length === 0) {
+                alert('Esta atividade não tem responsáveis cadastrados.');
+                return;
+            }
+
+            // Busca emails dos responsáveis na lista de usuários
+            const recipients = owners.map(name => {
+                const u = (window.users || []).find(u => u.name === name);
+                return { name, email: u ? u.email : null };
+            });
+
+            const semEmail = recipients.filter(r => !r.email);
+            if (semEmail.length > 0) {
+                const nomes = semEmail.map(r => r.name).join(', ');
+                const continuar = confirm(`Atenção: ${nomes} não possui e-mail cadastrado e não receberá o e-mail.\n\nDeseja continuar mesmo assim?`);
+                if (!continuar) return;
+            }
+
+            const comEmail = recipients.filter(r => r.email);
+            if (comEmail.length === 0) {
+                alert('Nenhum dos responsáveis tem e-mail cadastrado. Cadastre os e-mails na aba Usuários.');
+                return;
+            }
+
+            // Confirma envio
+            const prazo = t.deadline ? t.deadline.split('-').reverse().join('/') : 'Não definido';
+            const destinatarios = comEmail.map(r => `${r.name} (${r.email})`).join(', ');
+            const confirmar = confirm(
+                `Enviar e-mail de lembrete?\n\n` +
+                `📌 Atividade: ${t.title}\n` +
+                `📅 Prazo: ${prazo}\n` +
+                `🔖 Status: ${t.status}\n\n` +
+                `Destinatário(s):\n${destinatarios}`
+            );
+            if (!confirmar) return;
+
+            // Envia um email para cada responsável com email
+            const originalText = btnEl.innerText;
+            btnEl.innerText = '⏳ Enviando...';
+            btnEl.disabled = true;
+
+            let enviados = 0;
+            let erros = 0;
+
+            for (const r of comEmail) {
+                try {
+                    await emailjs.send('service_al37c0d', 'template_9kuc2xo', {
+                        to_email:    r.email,
+                        to_name:     r.name,
+                        owner_name:  r.name,
+                        title:       t.title,
+                        project:     t.project  || '',
+                        sector:      t.sector   || '',
+                        owners:      owners.join(', '),
+                        deadline:    prazo,
+                        status:      (t.status  || '').toUpperCase(),
+                    });
+                    enviados++;
+                } catch (err) {
+                    console.error('Erro ao enviar para', r.email, err);
+                    erros++;
+                }
+            }
+
+            btnEl.disabled = false;
+
+            if (erros === 0) {
+                btnEl.innerText = '✔ ENVIADO';
+                btnEl.style.background = '#6366f1';
+                setTimeout(() => {
+                    btnEl.innerText = originalText;
+                    btnEl.style.background = '';
+                }, 3000);
+                alert(`✅ E-mail enviado com sucesso para ${enviados} responsável(eis)!`);
+            } else {
+                btnEl.innerText = originalText;
+                alert(`⚠️ ${enviados} enviado(s) com sucesso, ${erros} falhou/falharam.\nVerifique o console (F12) para detalhes.`);
+            }
+        }
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // SISTEMA DE EMAILS AUTOMÁTICOS
+        // ══════════════════════════════════════════════════════
+        window.emailLogs = window.emailLogs || [];
+
+        // Chave de controle: taskId_trigger_YYYY-WW (semana do ano)
+        // Isso garante que cada gatilho dispara uma vez por semana no máximo,
+        // mas se o sistema não foi aberto no dia certo, recupera até 7 dias depois
+        function emailKey(taskId, trigger, date) {
+            const d = new Date(date + 'T00:00:00');
+            const startOfYear = new Date(d.getFullYear(), 0, 1);
+            const week = Math.ceil(((d - startOfYear) / 86400000 + startOfYear.getDay() + 1) / 7);
+            return `${taskId}_${trigger}_${d.getFullYear()}W${week}`;
+        }
+
+        // Calcula quais emails devem ser disparados hoje
+        // CORREÇÃO: usa <= em vez de === e recupera emails perdidos (janela de 7 dias)
+        function calcPendingEmails() {
+            const hoje = TODAY_ISO;
+            const pending = [];
+
+            (window.tasks || []).forEach(t => {
+                if (!t.deadline || t.status === 'concluido') return;
+                const owners = Array.isArray(t.owners) ? t.owners : (t.owner ? [t.owner] : []);
+                if (owners.length === 0) return;
+
+                const deadlineDate = new Date(t.deadline + 'T00:00:00');
+                const hojeDate    = new Date(hoje + 'T00:00:00');
+                const diffDays    = Math.round((deadlineDate - hojeDate) / (1000 * 60 * 60 * 24));
+
+                const isAtrasada = t.status === 'atraso';
+
+                // Regra 1: Faltam até 2 dias (inclui dia anterior que o sistema não abriu)
+                // Janela: de -7 até +1 (até 1 semana depois do prazo recupera)
+                if (diffDays <= 1 && diffDays >= -7 && t.status !== 'atraso') {
+                    const key = emailKey(t.id, '1d', hoje);
+                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
+                    if (!jaEnviado) {
+                        const motivo = diffDays <= 0
+                            ? `Prazo venceu há ${Math.abs(diffDays)} dia(s) — lembrete não enviado`
+                            : 'Falta 1 dia para o prazo';
+                        pending.push({ task: t, owners, trigger: '1d', motivo, key });
+                    }
+                }
+
+                // Regra 2: Atrasadas — avisa quando o sistema abrir (janela semanal)
+                // Para atrasadas, envia 1x por semana enquanto continuar atrasada
+                if (isAtrasada) {
+                    const key = emailKey(t.id, 'atraso', hoje);
+                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
+                    const diasAtraso = calcDiasAtraso(t);
+                    if (!jaEnviado) {
+                        pending.push({ task: t, owners, trigger: 'atraso', motivo: `Em ATRASO há ${diasAtraso} dia(s)`, key });
+                    }
+                }
+
+                // Regra 3: Faltam até 3 dias → aviso antecipado para qualquer status ativo
+                if (diffDays <= 3 && diffDays > 1) {
+                    const key = emailKey(t.id, '3d', hoje);
+                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
+                    if (!jaEnviado) {
+                        pending.push({ task: t, owners, trigger: '3d', motivo: `Faltam ${diffDays} dias para o prazo`, key });
+                    }
+                }
+            });
+
+            return pending;
+        }
+
+        // Renderiza as tabelas de Pendentes e Enviados na aba Usuários
+        function renderEmailSchedule() {
+            const pending = calcPendingEmails();
+
+            // ── Pendentes ──
+            const tbody = document.getElementById('emailPendentesBody');
+            const empty = document.getElementById('emailPendentesEmpty');
+            if (!tbody) return;
+
+            tbody.innerHTML = '';
+            if (pending.length === 0) {
+                document.getElementById('emailPendentesTable').classList.add('hidden');
+                empty.classList.remove('hidden');
+            } else {
+                document.getElementById('emailPendentesTable').classList.remove('hidden');
+                empty.classList.add('hidden');
+                pending.forEach(p => {
+                    const prazo = p.task.deadline ? p.task.deadline.split('-').reverse().join('/') : '-';
+                    const recipientsHtml = p.owners.map(name => {
+                        const u = (window.users || []).find(u => u.name === name);
+                        const temEmail = u && u.email;
+                        return `<span class="${temEmail ? 'text-slate-700' : 'text-rose-400 line-through'}" title="${temEmail ? u.email : 'Sem email cadastrado'}">${name}</span>`;
+                    }).join(', ');
+
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-indigo-50">
+                            <td class="py-2 px-3 font-bold text-slate-800">${p.task.title}</td>
+                            <td class="py-2 px-3 text-indigo-600 text-[10px] font-bold uppercase">${p.task.project}</td>
+                            <td class="py-2 px-3">${recipientsHtml}</td>
+                            <td class="py-2 px-3 font-mono font-bold">${prazo}</td>
+                            <td class="py-2 px-3">
+                                <span class="px-2 py-0.5 rounded text-[9px] font-black uppercase ${p.trigger === '3d' ? 'bg-rose-100 text-rose-700' : 'bg-amber-100 text-amber-700'}">${p.motivo}</span>
+                            </td>
+                            <td class="py-2 px-3 text-right">
+                                <button onclick="sendSinglePendingEmail('${p.key}', this)"
+                                    class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded text-[9px] font-bold">
+                                    ✉ ENVIAR
+                                </button>
+                            </td>
+                        </tr>`;
+                });
+            }
+
+            // Contador no botão disparar
+            const statusEl = document.getElementById('emailScheduleStatus');
+            if (statusEl) statusEl.innerText = `${pending.length} pendente(s) hoje`;
+
+            // ── Enviados ──
+            const envBody = document.getElementById('emailEnviadosBody');
+            const envEmpty = document.getElementById('emailEnviadosEmpty');
+            if (!envBody) return;
+            const logs = (window.emailLogs || []).slice(0, 100);
+            envBody.innerHTML = '';
+            if (logs.length === 0) {
+                envEmpty.classList.remove('hidden');
+            } else {
+                envEmpty.classList.add('hidden');
+                logs.forEach(l => {
+                    const dt = l.sentAt ? new Date(l.sentAt).toLocaleString('pt-BR') : '-';
+                    const tipoColor = l.tipo === 'auto' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-600';
+                    const tipoLabel = l.tipo === 'auto' ? 'Automático' : 'Manual';
+                    envBody.innerHTML += `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-2 px-3 text-[10px] font-mono text-slate-500">${dt}</td>
+                            <td class="py-2 px-3 font-bold text-slate-800 text-[11px]">${l.taskTitle || '-'}</td>
+                            <td class="py-2 px-3 text-slate-600 text-[11px]">${l.recipient || '-'}</td>
+                            <td class="py-2 px-3 text-[10px] text-slate-500">${l.motivo || '-'}</td>
+                            <td class="py-2 px-3"><span class="px-2 py-0.5 rounded text-[9px] font-black uppercase ${tipoColor}">${tipoLabel}</span></td>
+                        </tr>`;
+                });
+            }
+        }
+
+        // Alterna sub-tabs Pendentes / Enviados
+        function switchEmailTab(tab) {
+            document.getElementById('email-tab-pendentes').classList.toggle('hidden', tab !== 'pendentes');
+            document.getElementById('email-tab-enviados').classList.toggle('hidden', tab !== 'enviados');
+            document.getElementById('btn-email-pendentes').className = tab === 'pendentes'
+                ? 'pb-2 border-b-2 border-indigo-500 text-indigo-600'
+                : 'pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600';
+            document.getElementById('btn-email-enviados').className = tab === 'enviados'
+                ? 'pb-2 border-b-2 border-indigo-500 text-indigo-600'
+                : 'pb-2 border-b-2 border-transparent text-slate-400 hover:text-slate-600';
+        }
+
+        // Envia email para um item pendente específico (botão ENVIAR na linha)
+        async function sendSinglePendingEmail(key, btnEl) {
+            const pending = calcPendingEmails();
+            const item = pending.find(p => p.key === key);
+            if (!item) { alert('Este email já foi enviado ou não é mais aplicável.'); return; }
+            btnEl.innerText = '⏳...';
+            btnEl.disabled = true;
+            await _dispatchEmailItem(item, 'manual');
+            renderEmailSchedule();
+        }
+
+        // Dispara todos os emails pendentes (chamado automaticamente ou pelo botão)
+        async function runAutoEmailCheck(showFeedback = false) {
+            const pending = calcPendingEmails();
+            if (pending.length === 0) {
+                if (showFeedback) alert('✅ Nenhum email pendente para hoje!');
+                return;
+            }
+
+            let enviados = 0, semEmail = 0;
+            for (const item of pending) {
+                const resultado = await _dispatchEmailItem(item, 'auto');
+                enviados += resultado.enviados;
+                semEmail += resultado.semEmail;
+            }
+            renderEmailSchedule();
+            if (showFeedback) {
+                let msg = `✅ Verificação concluída!\n\n📨 ${enviados} email(s) enviado(s).`;
+                if (semEmail > 0) msg += `\n⚠️ ${semEmail} responsável(eis) sem e-mail cadastrado foram ignorados.`;
+                alert(msg);
+            }
+        }
+
+        // Função interna: envia emails de um item pendente e salva log
+        async function _dispatchEmailItem(item, tipo) {
+            const { task: t, owners, motivo, key } = item;
+            let enviados = 0, semEmail = 0;
+
+            for (const name of owners) {
+                const u = (window.users || []).find(u => u.name === name);
+                if (!u || !u.email) { semEmail++; continue; }
+
+                const prazo = t.deadline ? t.deadline.split('-').reverse().join('/') : 'Não definido';
+                try {
+                    await emailjs.send('service_al37c0d', 'template_9kuc2xo', {
+                        to_email:   u.email,
+                        to_name:    name,
+                        owner_name: name,
+                        title:      t.title,
+                        project:    t.project  || '',
+                        sector:     t.sector   || '',
+                        owners:     owners.join(', '),
+                        deadline:   prazo,
+                        status:     (t.status  || '').toUpperCase(),
+                    });
+
+                    // Salva log no Firebase
+                    const logId = Date.now() + Math.random();
+                    await window.saveEmailLog({
+                        id:        logId,
+                        key,
+                        taskId:    t.id,
+                        taskTitle: t.title,
+                        recipient: `${name} (${u.email})`,
+                        motivo,
+                        tipo,
+                        sentAt:    Date.now()
+                    });
+                    enviados++;
+                } catch(err) {
+                    console.error('Erro ao enviar email automático para', u.email, err);
+                }
+            }
+            return { enviados, semEmail };
+        }
+
+        // Toggle do envio automático — persiste no localStorage
+        // Padrão: PAUSADO (0) na primeira abertura
+        if (localStorage.getItem('pde_autoEmail') === null) {
+            localStorage.setItem('pde_autoEmail', '0');
+        }
+        function _updateAutoEmailBtn() {
+            const enabled = localStorage.getItem('pde_autoEmail') !== '0';
+            const btn = document.getElementById('btnAutoEmailToggle');
+            if (!btn) return;
+            if (enabled) {
+                btn.textContent = '🔔 Auto-email: ATIVO';
+                btn.className = 'px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2 bg-emerald-50 border-emerald-400 text-emerald-700 hover:bg-emerald-100';
+            } else {
+                btn.textContent = '🔕 Auto-email: PAUSADO';
+                btn.className = 'px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2 bg-rose-50 border-rose-300 text-rose-600 hover:bg-rose-100';
+            }
+        }
+        function toggleAutoEmail() {
+            const current = localStorage.getItem('pde_autoEmail') !== '0';
+            localStorage.setItem('pde_autoEmail', current ? '0' : '1');
+            _updateAutoEmailBtn();
+        }
+        document.addEventListener('DOMContentLoaded', _updateAutoEmailBtn);
+
+        // Roda verificação automática assim que os dados carregam (com debounce)
+        let _autoEmailTimer = null;
+        function scheduleAutoEmailCheck() {
+            if (localStorage.getItem('pde_autoEmail') === '0') return; // pausado
+            clearTimeout(_autoEmailTimer);
+            _autoEmailTimer = setTimeout(() => {
+                runAutoEmailCheck(false);
+            }, 3000);
+        }
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // DRAG & DROP PARA REORDENAR LINHAS
+        // ══════════════════════════════════════════════════════
+        let dragSrcRow = null;
+
+        function initDragDrop() {
+            const rows = document.querySelectorAll('#taskTableBody tr[draggable="true"]');
+            rows.forEach(row => {
+                row.addEventListener('dragstart', e => {
+                    dragSrcRow = row;
+                    row.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+                row.addEventListener('dragend', () => {
+                    row.classList.remove('dragging');
+                    document.querySelectorAll('#taskTableBody tr').forEach(r => r.classList.remove('drag-over'));
+                });
+                row.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (row !== dragSrcRow) {
+                        document.querySelectorAll('#taskTableBody tr').forEach(r => r.classList.remove('drag-over'));
+                        row.classList.add('drag-over');
+                    }
+                });
+                row.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    if (dragSrcRow && dragSrcRow !== row) {
+                        const tbody = document.getElementById('taskTableBody');
+                        const allRows = [...tbody.querySelectorAll('tr')];
+                        const srcIdx = allRows.indexOf(dragSrcRow);
+                        const tgtIdx = allRows.indexOf(row);
+                        if (srcIdx < tgtIdx) {
+                            row.after(dragSrcRow);
+                        } else {
+                            row.before(dragSrcRow);
+                        }
+                        // Salva nova ordem no Firebase
+                        const newOrder = [...tbody.querySelectorAll('tr')].map(r => parseInt(r.dataset.taskId)).filter(Boolean);
+                        window.taskOrder = newOrder;
+                        await window.saveOrderToFirebase(newOrder);
+                    }
+                    document.querySelectorAll('#taskTableBody tr').forEach(r => r.classList.remove('drag-over'));
+                });
+            });
+        }
+        // ══════════════════════════════════════════════════════
+
+        function initResizableColumns() {
+            const table = document.getElementById('taskTable');
+            if (!table) return;
+            const ths = table.querySelectorAll('thead th');
+            ths.forEach(th => {
+                const resizer = th.querySelector('.col-resizer');
+                if (!resizer) return;
+                let startX, startW;
+                resizer.addEventListener('mousedown', e => {
+                    startX = e.pageX;
+                    startW = th.offsetWidth;
+                    resizer.classList.add('active');
+                    const onMove = ev => {
+                        const newW = Math.max(60, startW + (ev.pageX - startX));
+                        th.style.width = newW + 'px';
+                    };
+                    const onUp = () => {
+                        resizer.classList.remove('active');
+                        document.removeEventListener('mousemove', onMove);
+                        document.removeEventListener('mouseup', onUp);
+                    };
+                    document.addEventListener('mousemove', onMove);
+                    document.addEventListener('mouseup', onUp);
+                    e.preventDefault();
+                });
+            });
+        }
+        // Init once DOM is ready and re-init is not needed since ths are static
+        document.addEventListener('DOMContentLoaded', initResizableColumns);
+        // Also init after a short delay in case table renders later
+        setTimeout(initResizableColumns, 800);
+        // ──────────────────────────────────────────────────────────────
+
+        // Fechar dropdown de owner ao clicar fora
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('ownerDropdown');
+            const container = document.getElementById('ownerTagsContainer');
+            if (dd && container && !container.contains(e.target) && !dd.contains(e.target)) {
+                dd.classList.add('hidden');
+            }
+        });
+
+        function updateDropdowns() {
+            const projects = [...new Set(window.tasks.map(t => t.project).filter(Boolean))].sort();
+            const container = document.getElementById('projCbList');
+            if (!container) return;
+            const checkedProj = new Set([...document.querySelectorAll('.proj-cb:checked')].map(c => c.value));
+            container.innerHTML = projects.map(p =>
+                `<label><input type="checkbox" class="proj-cb" value="${p}" ${checkedProj.has(p)?'checked':''} onchange="onProjCbChange(this)"> ${p}</label>`
+            ).join('');
+
+            // Atualiza dropdown de responsáveis com todos os owners únicos
+            const ownerSet = new Set();
+            window.tasks.forEach(t => {
+                if (Array.isArray(t.owners)) t.owners.forEach(o => o && ownerSet.add(o));
+                else if (t.owner) ownerSet.add(t.owner);
+            });
+            const owners = [...ownerSet].sort((a,b) => a.localeCompare(b));
+            const ownerContainer = document.getElementById('ownerCbList');
+            if (!ownerContainer) return;
+            const checkedOwners = new Set([...document.querySelectorAll('.owner-cb:checked')].map(c => c.value));
+            ownerContainer.innerHTML = owners.map(o =>
+                `<label><input type="checkbox" class="owner-cb" value="${o}" ${checkedOwners.has(o)?'checked':''} onchange="onOwnerCbChange(this)"> ${o}</label>`
+            ).join('');
+        }
+
+        function updateConfigSelects() {
+            const cfg = window.configs || { empreendimentos: [], setores: [] };
+            const projSel = document.getElementById('editProject');
+            const setorSel = document.getElementById('editSector');
+            if (!projSel || !setorSel) return;
+
+            const curProj = projSel.value;
+            const curSetor = setorSel.value;
+
+            projSel.innerHTML = '<option value="">Selecione...</option>';
+            cfg.empreendimentos.forEach(e => {
+                projSel.innerHTML += `<option value="${e.name}">${e.name}</option>`;
+            });
+            if (curProj) projSel.value = curProj;
+
+            setorSel.innerHTML = '<option value="">Selecione...</option>';
+            cfg.setores.forEach(s => {
+                setorSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+            });
+            if (curSetor) setorSel.value = curSetor;
+        }
+
+        // ══════════════════════════════════════════════════════
+        // GANTT LEVE
+        // ══════════════════════════════════════════════════════
+        function renderGantt() {
+            const container = document.getElementById('ganttInner');
+            if (!container) return;
+
+            const projFilter  = (document.getElementById('ganttProjFilter')  || {}).value || 'all';
+            const ownerFilter = (document.getElementById('ganttOwnerFilter') || {}).value || 'all';
+            const rangeMonths = parseInt((document.getElementById('ganttRange') || {}).value || '6');
+
+            // Popula filtro de empreendimentos
+            const projSel = document.getElementById('ganttProjFilter');
+            if (projSel) {
+                const projs = [...new Set((window.tasks || []).map(t => t.project).filter(Boolean))].sort();
+                const curVal = projSel.value;
+                projSel.innerHTML = '<option value="all">Todos</option>' + projs.map(p => `<option value="${p}" ${p === curVal ? 'selected' : ''}>${p}</option>`).join('');
+            }
+
+            // Popula filtro de responsáveis
+            const ownerSel = document.getElementById('ganttOwnerFilter');
+            if (ownerSel) {
+                const ownerSet = new Set();
+                (window.tasks||[]).forEach(t => {
+                    if (Array.isArray(t.owners)) t.owners.forEach(o => o && ownerSet.add(o));
+                    else if (t.owner) ownerSet.add(t.owner);
+                });
+                const curOwner = ownerSel.value;
+                ownerSel.innerHTML = '<option value="all">Todos</option>' + [...ownerSet].sort().map(o => `<option value="${o}" ${o === curOwner ? 'selected' : ''}>${o}</option>`).join('');
+            }
+
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+            const rangeStart = new Date(hoje);
+            rangeStart.setMonth(rangeStart.getMonth() - 1);
+            const rangeEnd = new Date(rangeStart);
+            rangeEnd.setMonth(rangeEnd.getMonth() + rangeMonths + 1);
+            const totalDays = Math.round((rangeEnd - rangeStart) / (1000*60*60*24));
+
+            // Tarefas com pelo menos start ou deadline, respeitando filtros
+            const tasks = (window.tasks || []).filter(t => {
+                if (projFilter !== 'all' && t.project !== projFilter) return false;
+                if (ownerFilter !== 'all') {
+                    const tOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
+                    if (!tOwners.includes(ownerFilter)) return false;
+                }
+                return t.start || t.deadline;
+            }).sort((a, b) => {
+                const da = a.start || a.deadline || '9999';
+                const db = b.start || b.deadline || '9999';
+                return da.localeCompare(db);
+            });
+
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="p-8 text-center text-slate-400 text-xs">Nenhuma atividade com datas para exibir.</div>';
+                return;
+            }
+
+            // Monta cabeçalho de meses
+            const LABEL_W = 220;
+            let monthHeaders = '';
+            let cur = new Date(rangeStart);
+            cur.setDate(1);
+            const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            while (cur <= rangeEnd) {
+                const dayOffset = Math.round((cur - rangeStart) / (1000*60*60*24));
+                const pct = (dayOffset / totalDays) * 100;
+                const label = `${months[cur.getMonth()]}/${String(cur.getFullYear()).slice(2)}`;
+                monthHeaders += `<div style="position:absolute;left:${pct}%;font-size:9px;font-weight:700;color:#94a3b8;white-space:nowrap;transform:translateX(-50%);">${label}</div>`;
+                cur.setMonth(cur.getMonth() + 1);
+            }
+
+            // Linha do hoje
+            const todayOff = Math.round((hoje - rangeStart) / (1000*60*60*24));
+            const todayPct = Math.max(0, Math.min(100, (todayOff / totalDays) * 100));
+            const todayLine = `<div class="gantt-today" style="left:${todayPct}%;"></div>`;
+
+            // Grid de fundo (meses alternados)
+            let bgGrid = '';
+            cur = new Date(rangeStart);
+            cur.setDate(1);
+            let idx = 0;
+            while (cur <= rangeEnd) {
+                const dayOff = Math.round((cur - rangeStart) / (1000*60*60*24));
+                const pct = (dayOff / totalDays) * 100;
+                const nextMonth = new Date(cur);
+                nextMonth.setMonth(nextMonth.getMonth() + 1);
+                const nextOff = Math.round((nextMonth - rangeStart) / (1000*60*60*24));
+                const w = ((nextOff - dayOff) / totalDays) * 100;
+                if (idx % 2 === 0) bgGrid += `<div style="position:absolute;left:${pct}%;width:${w}%;top:0;bottom:0;background:rgba(0,0,0,0.015);pointer-events:none;"></div>`;
+                cur.setMonth(cur.getMonth() + 1);
+                idx++;
+            }
+
+            // Linhas de tarefa - agrupadas por empreendimento e setor
+            const statusColors = { andamento: '#f59e0b', concluido: '#10b981', atraso: '#ef4444', pendente: '#94a3b8' };
+
+            const groups = {};
+            tasks.forEach(t => {
+                const proj = t.project || 'Sem Empreendimento';
+                const setor = t.sector || 'Geral';
+                if (!groups[proj]) groups[proj] = {};
+                if (!groups[proj][setor]) groups[proj][setor] = [];
+                groups[proj][setor].push(t);
+            });
+
+            let rows = '';
+            Object.keys(groups).sort().forEach(proj => {
+                rows += `<div style="display:flex;background:#eef2ff;border-bottom:1px solid #e0e7ff;">
+                    <div style="width:${LABEL_W}px;min-width:${LABEL_W}px;padding:5px 12px;font-size:10px;font-weight:900;color:#4f46e5;text-transform:uppercase;letter-spacing:0.05em;flex-shrink:0;">${proj}</div>
+                    <div style="flex:1;position:relative;">${bgGrid}${todayLine}</div>
+                </div>`;
+                Object.keys(groups[proj]).sort().forEach(setor => {
+                    rows += `<div style="display:flex;background:#f8fafc;border-bottom:1px solid #f1f5f9;">
+                        <div style="width:${LABEL_W}px;min-width:${LABEL_W}px;padding:3px 12px 3px 24px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;flex-shrink:0;">— ${setor}</div>
+                        <div style="flex:1;"></div>
+                    </div>`;
+                    groups[proj][setor].forEach(t => {
+                        const tStart = t.start ? new Date(t.start + 'T00:00:00') : null;
+                        const tEnd   = t.deadline ? new Date(t.deadline + 'T00:00:00') : null;
+                        const barStart = tStart ? Math.max(0, Math.round((tStart - rangeStart)/(1000*60*60*24))) : (tEnd ? Math.max(0, Math.round((tEnd - rangeStart)/(1000*60*60*24))-7) : 0);
+                        const barEnd   = tEnd   ? Math.min(totalDays, Math.round((tEnd - rangeStart)/(1000*60*60*24))) : Math.min(totalDays, barStart+14);
+                        if (barEnd < 0 || barStart > totalDays) return;
+                        const leftPct  = (barStart / totalDays) * 100;
+                        const widthPct = Math.max(0.5, ((barEnd - barStart) / totalDays) * 100);
+                        const color = statusColors[t.status] || '#94a3b8';
+                        const owners = Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner || '');
+                        const prazoStr = tEnd ? tEnd.toLocaleDateString('pt-BR') : '—';
+                        const inicioStr = tStart ? tStart.toLocaleDateString('pt-BR') : '—';
+                        const durDias = (tStart && tEnd) ? Math.round((tEnd-tStart)/(1000*60*60*24)) : null;
+                        const durLabel = durDias !== null ? ` · ${durDias}d` : '';
+                        const critIcon = t.criticalPath ? '⚡ ' : '';
+                        const tooltip = `${critIcon}${t.title}${owners ? ' · '+owners : ''} | ${inicioStr} → ${prazoStr}${durLabel}`.replace(/"/g,"'");
+                        const borderLeft = t.criticalPath ? 'border-left:2px solid #f97316;' : '';
+                        const ownerLabel = owners && widthPct > 8
+                            ? `<span style="position:absolute;left:5px;top:50%;transform:translateY(-50%);font-size:8px;font-weight:700;color:rgba(255,255,255,0.9);white-space:nowrap;overflow:hidden;max-width:90%;pointer-events:none;">${owners.split(',')[0].trim()}</span>`
+                            : '';
+                        rows += `<div class="gantt-row flex" style="height:34px;${borderLeft}" title="${tooltip}">
+                            <div style="width:${LABEL_W}px;min-width:${LABEL_W}px;padding:0 10px 0 28px;display:flex;align-items:center;gap:4px;border-right:1px solid #f1f5f9;flex-shrink:0;overflow:hidden;">
+                                ${t.criticalPath ? '<span style="font-size:9px;color:#f97316;flex-shrink:0;">⚡</span>' : ''}
+                                <span style="font-size:10px;font-weight:600;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.title}</span>
+                            </div>
+                            <div style="flex:1;position:relative;">
+                                ${bgGrid}${todayLine}
+                                <div class="gantt-bar gantt-bar-${t.status}" style="left:${leftPct}%;width:${widthPct}%;background:${color};position:absolute;"
+                                    onclick="editTask('${t.id}')" title="${tooltip}">${ownerLabel}</div>
+                            </div>
+                        </div>`;
+                    });
+                });
+            });
+
+            container.innerHTML = `
+                <div style="display:flex;">
+                    <div style="width:${LABEL_W}px;min-width:${LABEL_W}px;flex-shrink:0;"></div>
+                    <div style="flex:1;position:relative;height:28px;border-bottom:1px solid #e2e8f0;">${monthHeaders}</div>
+                </div>
+                ${rows || '<div class="p-6 text-center text-slate-400 text-xs">Nenhuma atividade visível nesse período.</div>'}
+            `;
+        }
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // UTILITÁRIOS ADICIONAIS
+        // ══════════════════════════════════════════════════════
+
+        // Destaca termo de busca no texto
+        function highlightSearch(text, search) {
+            if (!search || !text) return text || '';
+            const escaped = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            return String(text).replace(new RegExp(escaped, 'gi'), m => `<span class="search-highlight">${m}</span>`);
+        }
+
+        // Exporta o Gantt como PNG
+        async function exportGanttPNG() {
+            const el = document.getElementById('ganttInner');
+            if (!el) return;
+            const btn = event.target.closest('button');
+            const orig = btn.innerHTML;
+            btn.innerHTML = '⏳ Gerando...';
+            btn.disabled = true;
+            try {
+                const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true });
+                const link = document.createElement('a');
+                const proj = (document.getElementById('ganttProjFilter')?.value || 'todos').toLowerCase().replace(/\s+/g,'-');
+                link.download = `gantt-${proj}-${TODAY_ISO}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch(e) {
+                alert('Erro ao exportar: ' + e.message);
+            }
+            btn.innerHTML = orig;
+            btn.disabled = false;
+        }
+
+        // Atualiza badge de atraso no botão da aba Análise
+        function updateAtrasoBadge() {
+            const atrasadas = (window.tasks || []).filter(t => {
+                if (t.status === 'concluido') return false;
+                if (t.status === 'atraso') return true;
+                if (t.deadline) {
+                    const prazo = new Date(t.deadline + 'T00:00:00');
+                    return prazo < new Date(TODAY_ISO + 'T00:00:00');
+                }
+                return false;
+            }).length;
+            const criticas = (window.tasks || []).filter(t => t.criticalPath && t.status !== 'concluido').length;
+            const btn = document.getElementById('btn-tab-analise');
+            if (!btn) return;
+            // Preserva a classe da aba (ativa ou inativa) — só troca o conteúdo interno
+            const badges =
+                (atrasadas > 0 ? `<span class="atraso-badge">${atrasadas} atraso${atrasadas>1?'s':''}</span>` : '') +
+                (criticas  > 0 ? `<span class="critico-badge-header">${criticas} crítico${criticas>1?'s':''}</span>` : '');
+            btn.innerHTML = `ANÁLISE E DASHBOARD${badges}`;
+        }
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // ATALHOS DE TECLADO
+        // ══════════════════════════════════════════════════════
+        document.addEventListener('keydown', e => {
+            // Ignora se estiver num input/textarea/select
+            if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+            // Ignora se modal está aberto
+            const modalOpen = document.getElementById('taskModal') && !document.getElementById('taskModal').classList.contains('hidden');
+            if (modalOpen && e.key === 'Escape') { closeModal(); return; }
+            if (modalOpen) return;
+
+            switch(e.key) {
+                case 'n': case 'N': addTask(); break;
+                case '1': switchTab('lista'); break;
+                case '2': switchTab('analise'); break;
+                case '3': switchTab('usuarios'); break;
+                case '/':
+                    e.preventDefault();
+                    const s = document.getElementById('searchTerm');
+                    if (s) { s.focus(); s.select(); }
+                    break;
+                case 'd': case 'D':
+                    toggleDarkMode();
+                    break;
+            }
+        });
+
+        // Tooltip de atalhos — aparece com ? no teclado
+        document.addEventListener('keydown', e => {
+            if (['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
+            if (e.key === '?') {
+                alert('⌨️ Atalhos de Teclado\n\nN — Nova atividade\n/ — Focar na busca\n1 — Aba Lista\n2 — Aba Análise\n3 — Aba Configurações\nD — Alternar modo escuro\nESC — Fechar modal');
+            }
+        });
+        // ══════════════════════════════════════════════════════
+
+        // ══════════════════════════════════════════════════════
+        // GRÁFICO DE CARGA POR RESPONSÁVEL
+        // ══════════════════════════════════════════════════════
+        function renderOwnerChart() {
+            const container = document.getElementById('ownerChartContainer');
+            if (!container) return;
+
+            const projFilter = (document.getElementById('ownerChartProjFilter') || {}).value || 'all';
+
+            // Popula filtro de projetos do card
+            const sel = document.getElementById('ownerChartProjFilter');
+            if (sel) {
+                const projs = [...new Set((window.tasks||[]).map(t=>t.project).filter(Boolean))].sort();
+                const cur = sel.value;
+                sel.innerHTML = '<option value="all">Todos</option>' + projs.map(p=>`<option value="${p}" ${p===cur?'selected':''}>${p}</option>`).join('');
+            }
+
+            // Monta mapa owner → { total, andamento, atraso, pendente }
+            const ownerMap = {};
+            (window.tasks||[]).forEach(t => {
+                if (t.status === 'concluido') return;
+                if (projFilter !== 'all' && t.project !== projFilter) return;
+                const owners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : ['Sem responsável']);
+                owners.forEach(o => {
+                    if (!ownerMap[o]) ownerMap[o] = { total: 0, andamento: 0, atraso: 0, pendente: 0 };
+                    ownerMap[o].total++;
+                    const status = t.status === 'atraso' || (t.deadline && new Date(t.deadline+'T00:00:00') < new Date(TODAY_ISO+'T00:00:00'))
+                        ? 'atraso' : t.status;
+                    if (ownerMap[o][status] !== undefined) ownerMap[o][status]++;
+                });
+            });
+
+            const owners = Object.keys(ownerMap).sort((a,b) => ownerMap[b].total - ownerMap[a].total);
+
+            if (owners.length === 0) {
+                container.innerHTML = '<div class="text-center text-slate-400 text-xs py-4">Nenhuma atividade em aberto.</div>';
+                return;
+            }
+
+            const maxTotal = Math.max(...owners.map(o => ownerMap[o].total));
+
+            const statusColors = { andamento: '#f59e0b', atraso: '#ef4444', pendente: '#94a3b8' };
+            const statusLabels = { andamento: 'Andamento', atraso: 'Atraso', pendente: 'Pendente' };
+
+            container.innerHTML = `
+                <div style="display:flex;flex-direction:column;gap:10px;">
+                    ${owners.map(o => {
+                        const d = ownerMap[o];
+                        const barW = maxTotal > 0 ? (d.total / maxTotal) * 100 : 0;
+                        // Segmentos proporcionais dentro da barra
+                        const segments = ['atraso','andamento','pendente'].map(s => {
+                            const pct = d.total > 0 ? (d[s] / d.total) * 100 : 0;
+                            return pct > 0 ? `<div style="width:${pct}%;background:${statusColors[s]};height:100%;transition:width 0.3s;" title="${statusLabels[s]}: ${d[s]}"></div>` : '';
+                        }).join('');
+                        const tags = ['atraso','andamento','pendente'].map(s =>
+                            d[s] > 0 ? `<span style="font-size:9px;font-weight:700;color:${statusColors[s]};">${d[s]} ${statusLabels[s].toLowerCase()}</span>` : ''
+                        ).filter(Boolean).join('<span style="color:#cbd5e1;"> · </span>');
+                        return `
+                            <div>
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+                                    <span style="font-size:11px;font-weight:700;color:var(--owner-text,#1e293b);">${o}</span>
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        ${tags}
+                                        <span style="font-size:12px;font-weight:900;color:#6366f1;min-width:20px;text-align:right;">${d.total}</span>
+                                    </div>
+                                </div>
+                                <div style="height:10px;background:#f1f5f9;border-radius:5px;overflow:hidden;width:${barW}%;min-width:4px;max-width:100%;display:flex;">
+                                    ${segments}
+                                </div>
+                            </div>`;
+                    }).join('')}
+                    <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+                        ${Object.entries(statusColors).map(([s,c])=>`<span style="display:flex;align-items:center;gap:4px;font-size:9px;font-weight:700;color:#64748b;"><span style="width:10px;height:10px;border-radius:2px;background:${c};display:inline-block;"></span>${statusLabels[s]}</span>`).join('')}
+                    </div>
+                </div>`;
+
+            // Dark mode: ajusta cor do nome do responsável
+            if (document.body.classList.contains('dark')) {
+                container.querySelectorAll('[style*="color:var(--owner-text"]').forEach(el => {
+                    el.style.color = '#e2e8f0';
+                });
+            }
+        }
+        // ══════════════════════════════════════════════════════
+
+        function updateCharts() {
+            const stats = { total: window.tasks.length, concluido: 0, andamento: 0, pendente: 0, atraso: 0 };
+            const projMap = {};
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+
+            const criticas = [];
+            const proximas = [];
+
+            window.tasks.forEach(t => {
+                // Conta atraso automático por prazo vencido
+                let status = t.status;
+                if (status !== 'concluido' && status !== 'atraso' && t.deadline) {
+                    const prazo = new Date(t.deadline + 'T00:00:00');
+                    if (prazo < hoje) status = 'atraso';
+                }
+                if(stats[status] !== undefined) stats[status]++;
+
+                if(!projMap[t.project]) projMap[t.project] = { total: 0, andamento: 0, concluido: 0 };
+                projMap[t.project].total++;
+                if(t.status === 'andamento') projMap[t.project].andamento++;
+                if(t.status === 'concluido') projMap[t.project].concluido++;
+
+                // Críticas: status atraso OU prazo vencido OU delayStartDate definido
+                const isAtraso = status === 'atraso' || t.status === 'atraso';
+                if (isAtraso && t.status !== 'concluido') {
+                    const dias = calcDiasAtraso(t);
+                    criticas.push({...t, diasAtraso: dias, _statusEfetivo: 'atraso'});
+                } else if (t.deadline && t.status !== 'concluido') {
+                    const prazo = new Date(t.deadline + 'T00:00:00');
+                    const diffDays = Math.ceil((prazo - hoje) / (1000*60*60*24));
+                    if (diffDays >= 0 && diffDays <= 30) proximas.push({...t, diasFaltam: diffDays});
+                }
+            });
+
+            document.getElementById('statTotal').innerText = stats.total;
+            document.getElementById('statPendente').innerText = stats.pendente;
+            document.getElementById('statAndamento').innerText = stats.andamento;
+            document.getElementById('statConcluido').innerText = stats.concluido;
+            document.getElementById('statAtraso').innerText = stats.atraso;
+
+            const summaryBody = document.getElementById('projectSummaryBody');
+            summaryBody.innerHTML = '';
+            Object.keys(projMap).sort().forEach(p => {
+                const info = projMap[p];
+                const perc = info.total > 0 ? Math.round((info.concluido / info.total) * 100) : 0;
+                summaryBody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-bold text-slate-700 uppercase text-[11px]">${p}</td>
+                        <td class="p-4 text-center font-mono font-bold">${info.total}</td>
+                        <td class="p-4 text-center text-amber-600 font-bold font-mono">${info.andamento}</td>
+                        <td class="p-4 text-center text-emerald-600 font-bold font-mono">${info.concluido}</td>
+                        <td class="p-4 text-right">
+                            <div class="flex items-center justify-end gap-2">
+                                <div class="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                                    <div class="bg-emerald-500 h-full" style="width: ${perc}%"></div>
+                                </div>
+                                <span class="text-[10px] font-black">${perc}%</span>
+                            </div>
+                        </td>
+                    </tr>`;
+            });
+
+            const limitC = parseInt(document.getElementById('limitCriticas').value) || 5;
+            const criticasBody = document.getElementById('tableCriticasBody');
+            criticasBody.innerHTML = '';
+            if (criticas.length === 0) {
+                criticasBody.innerHTML = `<tr><td colspan="3" class="p-4 text-center text-slate-400 text-xs">✅ Nenhuma atividade crítica.</td></tr>`;
+            } else {
+                criticas.sort((a,b) => b.diasAtraso - a.diasAtraso).slice(0, limitC).forEach(t => {
+                    const fonte = t.delayStartDate ? `<span class="text-[8px] text-rose-400 block">desde ${t.delayStartDate.split('-').reverse().join('/')}</span>` : '';
+                    criticasBody.innerHTML += `
+                        <tr class="hover:bg-rose-50">
+                            <td class="p-3 font-bold text-slate-700">${t.title}</td>
+                            <td class="p-3 uppercase text-[10px] text-slate-500">${t.project}</td>
+                            <td class="p-3 text-center text-rose-600 font-black">${t.diasAtraso}d${fonte}</td>
+                        </tr>`;
+                });
+            }
+
+            const limitP = parseInt(document.getElementById('limitProximas').value) || 5;
+            const proximasBody = document.getElementById('tableProximasBody');
+            proximasBody.innerHTML = '';
+            proximas.sort((a,b) => a.diasFaltam - b.diasFaltam).slice(0, limitP).forEach(t => {
+                proximasBody.innerHTML += `
+                    <tr class="hover:bg-indigo-50">
+                        <td class="p-3 font-bold text-slate-700">${t.title}</td>
+                        <td class="p-3 text-slate-500">${Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner||'-')}</td>
+                        <td class="p-3 text-[10px] font-mono">${t.deadline.split('-').reverse().join('/')}</td>
+                        <td class="p-3 text-center text-indigo-600 font-black">${t.diasFaltam}d</td>
+                    </tr>`;
+            });
+
+            if (chartGeral) chartGeral.destroy();
+            chartGeral = new Chart(document.getElementById('chartStatusGeral'), {
+                type: 'pie',
+                data: {
+                    labels: ['Pendente', 'Andamento', 'Concluído', 'Atraso'],
+                    datasets: [{ data: [stats.pendente, stats.andamento, stats.concluido, stats.atraso], backgroundColor: ['#94a3b8', '#f59e0b', '#10b981', '#ef4444'] }]
+                },
+                options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10, weight: 'bold' } } } } }
+            });
+        }
+    </script>
+</body>
+</html>
