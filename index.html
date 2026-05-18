@@ -671,8 +671,10 @@
                                 <tr>
                                     <th class="p-4">Projeto</th>
                                     <th class="p-4 text-center">Total</th>
+                                    <th class="p-4 text-center">Pendente</th>
                                     <th class="p-4 text-center">Andamento</th>
                                     <th class="p-4 text-center">Concluído</th>
+                                    <th class="p-4 text-center text-rose-500">Atraso</th>
                                     <th class="p-4 text-right">Progresso</th>
                                 </tr>
                             </thead>
@@ -3453,10 +3455,12 @@
                 }
                 if(stats[status] !== undefined) stats[status]++;
 
-                if(!projMap[t.project]) projMap[t.project] = { total: 0, andamento: 0, concluido: 0 };
+                if(!projMap[t.project]) projMap[t.project] = { total: 0, pendente: 0, andamento: 0, concluido: 0, atraso: 0 };
                 projMap[t.project].total++;
-                if(t.status === 'andamento') projMap[t.project].andamento++;
-                if(t.status === 'concluido') projMap[t.project].concluido++;
+                if(status === 'pendente') projMap[t.project].pendente++;
+                if(status === 'andamento') projMap[t.project].andamento++;
+                if(status === 'concluido') projMap[t.project].concluido++;
+                if(status === 'atraso') projMap[t.project].atraso++;
 
                 // Críticas: status atraso OU prazo vencido OU delayStartDate definido
                 const isAtraso = status === 'atraso' || t.status === 'atraso';
@@ -3481,18 +3485,23 @@
             Object.keys(projMap).sort().forEach(p => {
                 const info = projMap[p];
                 const perc = info.total > 0 ? Math.round((info.concluido / info.total) * 100) : 0;
+                const empHex = getEmpHex(p);
                 summaryBody.innerHTML += `
                     <tr class="hover:bg-slate-50">
-                        <td class="p-4 font-bold text-slate-700 uppercase text-[11px]">${p}</td>
-                        <td class="p-4 text-center font-mono font-bold">${info.total}</td>
-                        <td class="p-4 text-center text-neutral-600 font-bold font-mono">${info.andamento}</td>
-                        <td class="p-4 text-center text-neutral-700 font-bold font-mono">${info.concluido}</td>
+                        <td class="p-4 font-bold text-slate-700 uppercase text-[11px]" style="border-left:3px solid ${empHex};padding-left:12px;">
+                            <span class="emp-dot" style="background:${empHex};"></span>${p}
+                        </td>
+                        <td class="p-4 text-center font-mono font-bold text-slate-800">${info.total}</td>
+                        <td class="p-4 text-center font-mono font-bold text-slate-500">${info.pendente}</td>
+                        <td class="p-4 text-center font-mono font-bold text-neutral-700">${info.andamento}</td>
+                        <td class="p-4 text-center font-mono font-bold text-neutral-600">${info.concluido}</td>
+                        <td class="p-4 text-center font-mono font-bold ${info.atraso > 0 ? 'text-rose-600' : 'text-slate-300'}">${info.atraso > 0 ? info.atraso : '—'}</td>
                         <td class="p-4 text-right">
                             <div class="flex items-center justify-end gap-2">
-                                <div class="w-16 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                                    <div class="bg-neutral-500 h-full" style="width: ${perc}%"></div>
+                                <div class="w-20 bg-slate-100 h-2 rounded-full overflow-hidden">
+                                    <div class="h-full rounded-full" style="width:${perc}%;background:${empHex};"></div>
                                 </div>
-                                <span class="text-[10px] font-black">${perc}%</span>
+                                <span class="text-[10px] font-black" style="color:${empHex};">${perc}%</span>
                             </div>
                         </td>
                     </tr>`;
