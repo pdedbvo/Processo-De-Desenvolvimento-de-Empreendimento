@@ -416,16 +416,16 @@
         body.electron-app header.sticky { top: 38px !important; }
         body.electron-app #urgente-banner { top: 102px !important; }
         .tb-title {
-            font-family: 'N27', sans-serif; font-size: 9px; font-weight: 700;
-            letter-spacing: 0.14em; text-transform: uppercase; color: #555;
+            font-family: 'N27', sans-serif; font-size: 11px; font-weight: 700;
+            letter-spacing: 0.2em; text-transform: uppercase; color: #C8C8C8;
         }
         .tb-controls { display: flex; gap: 4px; -webkit-app-region: no-drag; }
         .tb-btn {
-            width: 30px; height: 24px; border-radius: 5px; border: none;
+            width: 32px; height: 26px; border-radius: 5px; border: none;
             cursor: pointer; display: flex; align-items: center; justify-content: center;
-            font-size: 11px; background: transparent; color: #555; transition: all 0.15s;
+            font-size: 12px; background: transparent; color: #888; transition: all 0.15s;
         }
-        .tb-btn:hover { background: #2a2a2a; color: #C8C8C8; }
+        .tb-btn:hover { background: #2a2a2a; color: #ffffff; }
         .tb-btn.tb-close:hover { background: #dc2626; color: white; }
     </style>
 
@@ -542,7 +542,7 @@
 
     <!-- Barra de título customizada (só no Electron) -->
     <div id="electron-titlebar">
-        <span class="tb-title">PDE — Processo de Desenvolvimento de Empreendimentos</span>
+        <span class="tb-title">PDE</span>
         <div class="tb-controls">
             <button class="tb-btn" onclick="if(window.electronAPI) window.electronAPI.minimize()" title="Minimizar">─</button>
             <button class="tb-btn tb-max" id="tb-max-btn" onclick="if(window.electronAPI) window.electronAPI.maximize()" title="Maximizar/Restaurar">□</button>
