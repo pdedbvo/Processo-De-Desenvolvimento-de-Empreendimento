@@ -1347,9 +1347,11 @@
         const TODAY_ISO = TODAY.toISOString().split('T')[0];
 
         // ── Detecção Electron ─────────────────────────────
-        if (window.electronAPI) {
+        const isElectron = navigator.userAgent.toLowerCase().includes('electron');
+        if (isElectron) {
             document.body.classList.add('electron-app');
-            // Atualiza ícone do botão maximize/restore
+        }
+        if (window.electronAPI) {
             window.electronAPI.onWindowState(state => {
                 const btn = document.getElementById('tb-max-btn');
                 if (btn) btn.textContent = state === 'maximized' ? '❐' : '□';
