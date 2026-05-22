@@ -2439,6 +2439,7 @@
 
             let enviados = 0;
             let erros = 0;
+            const GESTOR_EMAIL = 'sergio.f@edificabpo.com.br';
 
             for (const r of comEmail) {
                 try {
@@ -2449,6 +2450,15 @@
                     console.error('Erro ao enviar para', r.email, err);
                     erros++;
                 }
+            }
+
+            // Cópia para o gestor
+            try {
+                const subject = `[CÓPIA] [PDE] Lembrete: ${t.title}`;
+                const htmlBody = buildEmailLembrete(t, owners.join(', '), t.status === 'atraso' ? 'atraso' : 'prazo');
+                await enviarViaGAS(GESTOR_EMAIL, subject, htmlBody);
+            } catch(err) {
+                console.error('Erro ao enviar cópia para gestor', err);
             }
 
             btnEl.disabled = false;
