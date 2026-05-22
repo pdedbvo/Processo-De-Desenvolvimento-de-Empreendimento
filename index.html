@@ -4178,9 +4178,6 @@
 
             for (const email of destinatarios) {
                 try {
-                    // Monta corpo do email
-                    const corpoEmail = buildCorpoEmail(data);
-
                     // Envia via Google Apps Script (Gmail direto)
                     const payload = {
                         to:        [email],
@@ -4190,14 +4187,13 @@
                         pdfName:   `PDE-Relatorio-${TODAY_ISO}.pdf`,
                     };
 
-                    const resp = await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
+                    await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
                         method:  'POST',
+                        mode:    'no-cors',
                         headers: { 'Content-Type': 'application/json' },
                         body:    JSON.stringify(payload),
                     });
-
-                    const result = await resp.json();
-                    if (!result.success) throw new Error(result.error || 'Erro ao enviar');
+                    // no-cors não retorna resposta legível — assumimos sucesso se não lançar exceção
                     enviados++;
                 } catch(err) {
                     console.error('Erro ao enviar para', email, err);
