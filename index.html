@@ -4180,6 +4180,7 @@
 
             for (const email of destinatarios) {
                 try {
+                    const gasUrl = 'https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec';
                     const payload = {
                         to:       [email],
                         subject:  `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
@@ -4188,11 +4189,9 @@
                         pptName:  `PDE-Relatorio-${TODAY_ISO}.pptx`,
                     };
 
-                    await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
-                        method:  'POST',
-                        mode:    'no-cors',
-                        headers: { 'Content-Type': 'application/json' },
-                        body:    JSON.stringify(payload),
+                    await fetch(`${gasUrl}?data=${encodeURIComponent(JSON.stringify(payload))}`, {
+                        method: 'GET',
+                        mode:   'no-cors',
                     });
                     enviados++;
                 } catch(err) {
