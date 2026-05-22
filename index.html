@@ -4154,21 +4154,21 @@
                 if (!ok) return;
             }
 
-            if (btnEl) { btnEl.innerText = '⏳ Gerando PDF...'; btnEl.disabled = true; }
+            if (btnEl) { btnEl.innerText = '⏳ Gerando PPT...'; btnEl.disabled = true; }
             const statusEl = document.getElementById('relatorioStatusMsg');
-            if (statusEl) statusEl.innerText = 'Gerando PDF...';
+            if (statusEl) statusEl.innerText = 'Gerando PPT...';
 
-            // Gera PDF e converte para base64
-            let pdfBase64 = '';
+            // Gera PPTX e converte para base64
+            let pptBase64 = '';
             try {
-                const pdfBuffer = await gerarPDFRelatorio();
-                const uint8 = new Uint8Array(pdfBuffer);
+                const pptBuffer = await gerarPPTRelatorioBuffer(data);
+                const uint8 = new Uint8Array(pptBuffer);
                 let binary = '';
                 uint8.forEach(b => binary += String.fromCharCode(b));
-                pdfBase64 = btoa(binary);
-                console.log(`PDF gerado: ${Math.round(pdfBase64.length/1024)}KB`);
+                pptBase64 = btoa(binary);
+                console.log(`PPT gerado: ${Math.round(pptBase64.length/1024)}KB`);
             } catch(err) {
-                console.error('Erro ao gerar PDF:', err);
+                console.error('Erro ao gerar PPT:', err);
             }
 
             if (statusEl) statusEl.innerText = 'Enviando emails...';
@@ -4180,13 +4180,12 @@
 
             for (const email of destinatarios) {
                 try {
-                    // Envia via Google Apps Script (Gmail direto)
                     const payload = {
-                        to:        [email],
-                        subject:   `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
-                        htmlBody:  corpoEmail,
-                        pdfBase64: pdfBase64 || null,
-                        pdfName:   `PDE-Relatorio-${TODAY_ISO}.pdf`,
+                        to:       [email],
+                        subject:  `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
+                        htmlBody: corpoEmail,
+                        pptBase64: pptBase64 || null,
+                        pptName:  `PDE-Relatorio-${TODAY_ISO}.pptx`,
                     };
 
                     await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
@@ -4195,7 +4194,6 @@
                         headers: { 'Content-Type': 'application/json' },
                         body:    JSON.stringify(payload),
                     });
-                    // no-cors não retorna resposta legível — assumimos sucesso se não lançar exceção
                     enviados++;
                 } catch(err) {
                     console.error('Erro ao enviar para', email, err);
@@ -4291,17 +4289,24 @@
             }).filter(Boolean).join('\n');
         }
 
-        // ── Gera e baixa o PPT ──
-        function downloadRelatorioSemanal() {
-            const data = buildRelatorioData();
-            if (data.total === 0) {
-                alert('Nenhuma atividade com atualização nos últimos 7 dias.\n\nDica: ajuste o filtro de Sprint para incluir o período desejado.');
-                return;
-            }
-            gerarPPTRelatorio(data);
+        // Versão que retorna buffer (para email) em vez de baixar
+        function gerarPPTRelatorioBuffer(data) {
+            return new Promise((resolve, reject) => {
+                try {
+                    const pres = _buildPPTPresentation(data);
+                    pres.write({ outputType: 'arraybuffer' }).then(resolve).catch(reject);
+                } catch(e) { reject(e); }
+            });
         }
 
+        // Versão que baixa o arquivo
         function gerarPPTRelatorio(data) {
+            const pres = _buildPPTPresentation(data);
+            return pres;
+        }
+
+        // Constrói a apresentação (compartilhado entre download e email)
+        function _buildPPTPresentation(data) {
             const PRETO   = "111111";
             const BRANCO  = "FFFFFF";
             const CINZA_E = "646464";
@@ -4432,8 +4437,16 @@
                 sf.addText("BE A MORADIA DO FUTURO  ·  DBVO HUB  ·  CONFIDENCIAL", { x:0.28, y:7.15, w:13, h:0.3, fontSize:7, color:CINZA_E, fontFace:"Arial", charSpacing:2, align:"center", margin:0 });
             }
 
-            const dateStr = TODAY_ISO.replace(/-/g,'');
-            pres.writeFile({ fileName: `PDE-Reuniao-Semanal-${dateStr}.pptx` });
+            return pres;
+        }
+
+        function downloadRelatorioSemanal() {
+            const data = buildRelatorioData();
+            if (data.total === 0) {
+                alert('Nenhuma atividade com atualização nos últimos 7 dias.\n\nDica: ajuste o filtro de Sprint para incluir o período desejado.');
+                return;
+            }
+            gerarPPTRelatorio(data);
         }
         // ══════════════════════════════════════════════════════
 
