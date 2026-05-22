@@ -1093,7 +1093,7 @@
                     <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">📧 Emails Automáticos de Lembrete</h2>
                     <p class="text-[10px] text-slate-400 mt-1">
                         Disparados automaticamente ao abrir o sistema. 
-                        <span class="text-slate-600 font-bold">Regras: atividades normais → 1 dia antes. Atrasadas → 3 dias e 1 dia antes.</span>
+                        <span class="text-slate-600 font-bold">Regras: 3 dias antes do prazo (1x) · No dia do vencimento (1x) · Atrasadas toda quarta e sexta. Cópia sempre para sergio.f@edificabpo.com.br</span>
                     </p>
                 </div>
                 <div class="flex gap-2 items-center flex-wrap">
@@ -2682,14 +2682,13 @@
                 }
             }
 
-            // Envia cópia para o gestor (se não for já destinatário)
-            if (!emailsEnviados.has(GESTOR_EMAIL)) {
-                try {
-                    const htmlBody = buildEmailLembrete(t, 'Gestor', trigger === 'atraso' ? 'atraso' : 'prazo');
-                    await enviarViaGAS(GESTOR_EMAIL, `[CÓPIA] ${subject}`, htmlBody);
-                } catch(err) {
-                    console.error('Erro ao enviar cópia para gestor', err);
-                }
+            // Envia cópia para o gestor sempre (independente de ser responsável)
+            try {
+                const nomeResp = owners.join(', ');
+                const htmlBodyGestor = buildEmailLembrete(t, nomeResp, trigger === 'atraso' ? 'atraso' : 'prazo');
+                await enviarViaGAS(GESTOR_EMAIL, `[CÓPIA] ${subject}`, htmlBodyGestor);
+            } catch(err) {
+                console.error('Erro ao enviar cópia para gestor', err);
             }
 
             // Salva log no Firebase
