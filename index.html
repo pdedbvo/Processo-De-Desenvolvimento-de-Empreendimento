@@ -4174,6 +4174,8 @@
             if (statusEl) statusEl.innerText = 'Enviando emails...';
             if (btnEl) btnEl.innerText = '⏳ Enviando...';
 
+            // Monta corpo do email
+            const corpoEmail = buildCorpoEmail(data);
             let enviados = 0, erros = 0;
 
             for (const email of destinatarios) {
