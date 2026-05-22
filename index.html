@@ -11,6 +11,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
     <script>
         // Inicializa EmailJS com a Public Key
         (function(){ emailjs.init({ publicKey: "HF6APN6CEBMHgL_eo" }); })();
@@ -484,6 +485,7 @@
             updateAtrasoBadge();
             scheduleAutoEmailCheck();
             scheduleDesktopNotifications();
+            checkRelatorioSemanal();
         });
 
         onSnapshot(usersCol, (snap) => {
@@ -528,11 +530,13 @@
                 if (cfg.type === 'empreendimento') window.configs.empreendimentos.push(cfg);
                 if (cfg.type === 'setor') window.configs.setores.push(cfg);
                 if (cfg.type === 'taskOrder') window.taskOrder = cfg.order || [];
+                if (cfg.type === '_relatorio') window.configs._relatorio = cfg;
             });
             window.configs.empreendimentos.sort((a,b) => (a.name||'').localeCompare(b.name||''));
             window.configs.setores.sort((a,b) => (a.name||'').localeCompare(b.name||''));
             renderConfigsTable();
             updateConfigSelects();
+            loadRelatorioConfig();
         });
     </script>
 </head>
@@ -752,6 +756,12 @@
                     </button>
                     <button onclick="downloadPDF()" style="background:#111111;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
                         ⬇ PDF
+                    </button>
+                    <button onclick="downloadRelatorioSemanal()" style="background:#2d3e6f;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        📊 PPT SEMANAL
+                    </button>
+                    <button onclick="enviarRelatorioEmail(this)" style="background:#5b3fa6;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        ✉ ENVIAR RELATÓRIO
                     </button>
                 </div>
             </div>
@@ -1148,9 +1158,47 @@
                 <div id="emailEnviadosEmpty" class="hidden py-8 text-center text-slate-400 text-xs">Nenhum email enviado ainda.</div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal Config (Empreendimento / Setor) -->
+        <!-- Painel Relatório Semanal -->
+        <div class="card p-6">
+            <div class="flex flex-wrap justify-between items-center mb-5 gap-3">
+                <div>
+                    <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">📊 Relatório Semanal de Reunião</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                        Gera um PPT e envia por email automaticamente toda segunda-feira ao abrir o sistema.
+                        <span class="text-slate-600 font-bold">Inclui todas as atividades com atualização no histórico nos últimos 7 dias.</span>
+                    </p>
+                </div>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <button onclick="toggleRelatorioAuto()" id="btnRelatorioAutoToggle"
+                        class="px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2">
+                    </button>
+                    <button onclick="downloadRelatorioSemanal()" style="background:#2d3e6f;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        📊 GERAR PPT AGORA
+                    </button>
+                    <button onclick="enviarRelatorioEmail(this)" style="background:#5b3fa6;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        ✉ ENVIAR POR EMAIL
+                    </button>
+                </div>
+            </div>
+
+            <!-- Destinatários -->
+            <div class="mt-4">
+                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-2">Destinatários do Relatório</label>
+                <p class="text-[10px] text-slate-400 mb-3">Adicione os emails que devem receber o relatório semanal. Separados do envio de lembretes de prazo.</p>
+                <div class="flex gap-2 mb-3">
+                    <input type="email" id="relatorioEmailInput" placeholder="email@empresa.com.br"
+                        class="flex-1 p-2 border rounded-md text-xs bg-slate-50 outline-none"
+                        onkeydown="if(event.key==='Enter') addRelatorioDestinatario()">
+                    <button onclick="addRelatorioDestinatario()" style="background:#111111;" class="hover:opacity-80 text-white px-4 py-2 rounded-md font-bold text-xs">
+                        + ADICIONAR
+                    </button>
+                </div>
+                <div id="relatorioDestinatariosContainer" class="space-y-1"></div>
+            </div>
+            <p id="relatorioStatusMsg" class="text-[10px] font-bold text-slate-400 mt-4"></p>
+        </div>
+    </div>
     <div id="configModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
             <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
@@ -3817,7 +3865,539 @@
 
         function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
         // ══════════════════════════════════════════════════════
+
         // ══════════════════════════════════════════════════════
+        // RELATÓRIO SEMANAL — PPT + EMAIL
+        // ══════════════════════════════════════════════════════
+
+        // ── Configurações de destinatários (Firebase configs) ──
+        window.relatorioDestinatarios = window.relatorioDestinatarios || [];
+        window.relatorioAutoAtivo = false;
+
+        function loadRelatorioConfig() {
+            const cfg = (window.configs && window.configs._relatorio) || {};
+            window.relatorioAutoAtivo = cfg.autoAtivo || false;
+            window.relatorioDestinatarios = cfg.destinatarios || [];
+            renderRelatorioDestinatarios();
+            updateRelatorioToggleBtn();
+        }
+
+        async function saveRelatorioConfig() {
+            await window.saveConfig({
+                id: 'relatorio_semanal',
+                type: '_relatorio',
+                autoAtivo: window.relatorioAutoAtivo,
+                destinatarios: window.relatorioDestinatarios
+            });
+        }
+
+        function toggleRelatorioAuto() {
+            window.relatorioAutoAtivo = !window.relatorioAutoAtivo;
+            updateRelatorioToggleBtn();
+            saveRelatorioConfig();
+        }
+
+        function updateRelatorioToggleBtn() {
+            const btn = document.getElementById('btnRelatorioAutoToggle');
+            if (!btn) return;
+            if (window.relatorioAutoAtivo) {
+                btn.textContent = '✅ Automático ATIVO';
+                btn.style.cssText = 'background:#d1fae5;color:#065f46;border-color:#6ee7b7;';
+            } else {
+                btn.textContent = '⭕ Automático INATIVO';
+                btn.style.cssText = 'background:#f1f5f9;color:#64748b;border-color:#cbd5e1;';
+            }
+        }
+
+        function addRelatorioDestinatario() {
+            const inp = document.getElementById('relatorioEmailInput');
+            const email = (inp.value || '').trim().toLowerCase();
+            if (!email || !email.includes('@')) return alert('Email inválido.');
+            if (window.relatorioDestinatarios.includes(email)) return alert('Este email já está na lista.');
+            window.relatorioDestinatarios.push(email);
+            inp.value = '';
+            renderRelatorioDestinatarios();
+            saveRelatorioConfig();
+        }
+
+        function removeRelatorioDestinatario(email) {
+            window.relatorioDestinatarios = window.relatorioDestinatarios.filter(e => e !== email);
+            renderRelatorioDestinatarios();
+            saveRelatorioConfig();
+        }
+
+        function renderRelatorioDestinatarios() {
+            const container = document.getElementById('relatorioDestinatariosContainer');
+            if (!container) return;
+            if (window.relatorioDestinatarios.length === 0) {
+                container.innerHTML = `<p class="text-[10px] text-slate-400 italic">Nenhum destinatário cadastrado ainda.</p>`;
+                return;
+            }
+            container.innerHTML = window.relatorioDestinatarios.map(email => `
+                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                    <span class="text-xs font-medium text-slate-700">✉ ${email}</span>
+                    <button onclick="removeRelatorioDestinatario('${email}')" class="text-rose-400 hover:text-rose-600 font-bold text-xs ml-4">✕</button>
+                </div>`).join('');
+        }
+
+        // ── Verifica e dispara relatório automático nas segundas ──
+        function checkRelatorioSemanal() {
+            if (!window.relatorioAutoAtivo) return;
+            if (!window.relatorioDestinatarios || window.relatorioDestinatarios.length === 0) return;
+            const today = new Date();
+            if (today.getDay() !== 1) return; // 1 = segunda-feira
+            const key = `pde_relatorio_semanal_${TODAY_ISO}`;
+            if (localStorage.getItem(key)) return; // já enviou hoje
+            if (window._relatorioAutoShown) return;
+            window._relatorioAutoShown = true;
+            setTimeout(async () => {
+                await enviarRelatorioEmail(null, true);
+                localStorage.setItem(key, '1');
+            }, 6000);
+        }
+
+        // ── Calcula tasks com atualização nos últimos 7 dias ──
+        function getTasksUltimasSemana() {
+            const hoje = new Date(TODAY_ISO + 'T23:59:59');
+            const seteDiasAtras = new Date(hoje);
+            seteDiasAtras.setDate(seteDiasAtras.getDate() - 7);
+            const seteDiasISO = seteDiasAtras.toISOString().split('T')[0];
+
+            return (window.tasks || []).filter(t => {
+                if (!t.notes) return false;
+                try {
+                    const hist = JSON.parse(t.notes);
+                    return hist.some(h => h.date && h.date >= seteDiasISO);
+                } catch(e) { return false; }
+            });
+        }
+
+        // ── Gera dados estruturados para o relatório ──
+        function buildRelatorioData() {
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const tasks = getTasksUltimasSemana();
+            const seteDiasISO = (() => {
+                const d = new Date(TODAY_ISO + 'T00:00:00');
+                d.setDate(d.getDate() - 7);
+                return d.toISOString().split('T')[0];
+            })();
+
+            const byEmp = {};
+            EMPS.forEach(e => { byEmp[e] = []; });
+
+            tasks.forEach(t => {
+                const projs = Array.isArray(t.projects) && t.projects.length ? t.projects : (t.project ? [t.project] : []);
+                // Pega última atualização dentro do sprint
+                let lastHist = '';
+                try {
+                    const hist = JSON.parse(t.notes || '[]');
+                    const recentes = hist.filter(h => h.date && h.date >= seteDiasISO).sort((a,b) => b.date.localeCompare(a.date));
+                    if (recentes.length > 0) lastHist = recentes[0].date.split('-').reverse().join('/').substring(0,5) + ': ' + recentes[0].text;
+                } catch(e) {}
+
+                const row = {
+                    titulo:  t.title || '',
+                    resp:    (Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : t.owner) || '',
+                    setor:   t.sector || '',
+                    prazo:   t.deadline ? t.deadline.split('-').reverse().join('/') : '-',
+                    status:  (t.status || '').toUpperCase(),
+                    hist:    lastHist
+                };
+
+                projs.forEach(p => {
+                    const key = EMPS.find(e => p.toUpperCase().includes(e.replace('BE ','').split(' ')[0])) || p;
+                    if (byEmp[key]) byEmp[key].push(row);
+                    else {
+                        // Fallback: tenta match parcial
+                        const matched = EMPS.find(e => e.includes(p) || p.includes(e));
+                        if (matched) byEmp[matched].push(row);
+                    }
+                });
+            });
+
+            const total     = tasks.length;
+            const andamento = tasks.filter(t => t.status === 'andamento').length;
+            const atrasadas = tasks.filter(t => t.status === 'atraso').length;
+            const concluido = tasks.filter(t => t.status === 'concluido').length;
+            const pendente  = tasks.filter(t => t.status === 'pendente').length;
+            const atrasadasList = tasks.filter(t => t.status === 'atraso').map(t => ({
+                titulo: t.title || '',
+                emp:    Array.isArray(t.projects) && t.projects.length ? t.projects[0] : (t.project || ''),
+                resp:   (Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : t.owner) || '',
+                prazo:  t.deadline ? t.deadline.split('-').reverse().join('/') : '-',
+                hist:   (() => {
+                    try {
+                        const h = JSON.parse(t.notes||'[]').sort((a,b)=>b.date.localeCompare(a.date));
+                        return h.length ? h[0].date.split('-').reverse().join('/').substring(0,5)+': '+h[0].text : '';
+                    } catch(e) { return ''; }
+                })()
+            }));
+
+            const sprintStart = seteDiasISO.split('-').reverse().join('/').substring(0,5);
+            const sprintEnd   = TODAY_ISO.split('-').reverse().join('/').substring(0,5);
+
+            return { byEmp, total, andamento, atrasadas, concluido, pendente, atrasadasList, sprintStart, sprintEnd, dataGeracao: TODAY_ISO.split('-').reverse().join('/') };
+        }
+
+        // ── Gera PDF do relatório para envio por email ──
+        async function gerarPDFRelatorio() {
+            const { jsPDF } = window.jspdf;
+            const data = buildRelatorioData();
+            const doc  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const EMP_COLORS = { "BE GARDEN":[70,178,118], "BE BONIFACIO":[252,191,68], "BE DUMONT":[153,44,26], "BE SÃO PAULO":[114,71,246] };
+
+            // Capa
+            doc.setFillColor(17,17,17);
+            doc.rect(0,0,297,210,'F');
+            doc.setTextColor(255,255,255);
+            doc.setFontSize(22); doc.setFont('helvetica','bold');
+            doc.text('REUNIÃO SEMANAL', 148, 80, {align:'center'});
+            doc.setFontSize(10); doc.setFont('helvetica','normal');
+            doc.setTextColor(200,200,200);
+            doc.text('RELATÓRIO DE ATIVIDADES', 148, 92, {align:'center'});
+            doc.text(`Sprint: ${data.sprintStart} – ${data.sprintEnd}  ·  Gerado em: ${data.dataGeracao}`, 148, 105, {align:'center'});
+            doc.setFontSize(9);
+            const kpis = [`TOTAL: ${data.total}`, `ANDAMENTO: ${data.andamento}`, `ATRASADAS: ${data.atrasadas}`, `CONCLUÍDAS: ${data.concluido}`, `PENDENTES: ${data.pendente}`];
+            doc.text(kpis.join('   ·   '), 148, 125, {align:'center'});
+
+            // Slides por empreendimento
+            EMPS.forEach(emp => {
+                const rows = data.byEmp[emp] || [];
+                doc.addPage();
+                const [r,g,b] = EMP_COLORS[emp] || [100,100,100];
+                doc.setFillColor(17,17,17);
+                doc.rect(0,0,297,22,'F');
+                doc.setFillColor(r,g,b);
+                doc.rect(0,22,297,2,'F');
+                doc.setTextColor(255,255,255);
+                doc.setFontSize(14); doc.setFont('helvetica','bold');
+                doc.text(emp, 10, 14);
+                doc.setFontSize(7); doc.setFont('helvetica','normal');
+                doc.setTextColor(200,200,200);
+                doc.text(`Sprint: ${data.sprintStart}–${data.sprintEnd}  ·  ${data.dataGeracao}`, 10, 19);
+
+                if (rows.length === 0) {
+                    doc.setTextColor(150,150,150);
+                    doc.setFontSize(10);
+                    doc.text('Nenhuma atividade atualizada neste período.', 148, 110, {align:'center'});
+                    return;
+                }
+
+                doc.autoTable({
+                    startY: 28,
+                    head: [['ATIVIDADE','RESPONSÁVEL','SETOR','PRAZO','STATUS','ÚLTIMA ATUALIZAÇÃO']],
+                    body: rows.map(r => [r.titulo, r.resp, r.setor, r.prazo, r.status, r.hist]),
+                    styles: { fontSize: 6.5, cellPadding: 2, overflow:'linebreak', valign:'top' },
+                    headStyles: { fillColor:[17,17,17], textColor:255, fontStyle:'bold', fontSize:7 },
+                    columnStyles: { 0:{cellWidth:40}, 1:{cellWidth:28}, 2:{cellWidth:22}, 3:{cellWidth:18}, 4:{cellWidth:18}, 5:{cellWidth:'auto'} },
+                    alternateRowStyles: { fillColor:[248,248,248] },
+                    didParseCell(d) {
+                        if (d.section==='body' && d.column.index===4) {
+                            if (d.cell.raw==='ATRASO') d.cell.styles.textColor=[153,44,26];
+                            else if (d.cell.raw==='CONCLUÍDO') d.cell.styles.textColor=[22,101,52];
+                        }
+                    },
+                    didDrawCell(d) {
+                        if (d.section==='body' && d.column.index===0) {
+                            doc.setFillColor(r,g,b);
+                            doc.rect(d.cell.x, d.cell.y, 1.5, d.cell.height, 'F');
+                        }
+                    }
+                });
+            });
+
+            // Slide de atenção
+            if (data.atrasadasList.length > 0) {
+                doc.addPage();
+                doc.setFillColor(17,17,17);
+                doc.rect(0,0,297,210,'F');
+                doc.setTextColor(255,100,100);
+                doc.setFontSize(18); doc.setFont('helvetica','bold');
+                doc.text('PONTOS DE ATENÇÃO', 10, 18);
+                doc.setFontSize(8); doc.setFont('helvetica','normal');
+                doc.setTextColor(200,200,200);
+                doc.text(`Sprint: ${data.sprintStart}–${data.sprintEnd}  ·  ${data.dataGeracao}`, 10, 25);
+
+                doc.autoTable({
+                    startY: 32,
+                    head: [['ATIVIDADE','EMPREENDIMENTO','RESPONSÁVEL','PRAZO','ÚLTIMA ATUALIZAÇÃO']],
+                    body: data.atrasadasList.map(a => [a.titulo, a.emp, a.resp, a.prazo, a.hist]),
+                    styles: { fontSize: 6.5, cellPadding: 2.5, overflow:'linebreak', valign:'top', textColor:[220,220,220], fillColor:[26,10,10] },
+                    headStyles: { fillColor:[80,10,10], textColor:[255,100,100], fontStyle:'bold', fontSize:7 },
+                    columnStyles: { 0:{cellWidth:55}, 1:{cellWidth:28}, 2:{cellWidth:28}, 3:{cellWidth:20}, 4:{cellWidth:'auto'} },
+                    alternateRowStyles: { fillColor:[40,10,10] },
+                    didParseCell(d) {
+                        if (d.section==='body' && d.column.index===3) d.cell.styles.textColor=[255,100,100];
+                    }
+                });
+            }
+
+            return doc.output('arraybuffer');
+        }
+
+        // ── Enviar relatório por email ──
+        async function enviarRelatorioEmail(btnEl, isAuto = false) {
+            const destinatarios = window.relatorioDestinatarios || [];
+            if (destinatarios.length === 0) {
+                alert('Nenhum destinatário cadastrado. Adicione emails na aba Configurações → Relatório Semanal.');
+                return;
+            }
+            const data = buildRelatorioData();
+            if (data.total === 0) {
+                if (!isAuto) alert('Nenhuma atividade com atualização nos últimos 7 dias.');
+                return;
+            }
+
+            if (!isAuto) {
+                const ok = confirm(`Enviar relatório semanal para ${destinatarios.length} destinatário(s)?\n\n${destinatarios.join('\n')}\n\nSprint: ${data.sprintStart}–${data.sprintEnd}\nTotal de atividades: ${data.total}`);
+                if (!ok) return;
+            }
+
+            if (btnEl) { btnEl.innerText = '⏳ Gerando PDF...'; btnEl.disabled = true; }
+            const statusEl = document.getElementById('relatorioStatusMsg');
+            if (statusEl) statusEl.innerText = 'Gerando PDF...';
+
+            // Gera PDF e converte para base64
+            let pdfBase64 = '';
+            try {
+                const pdfBuffer = await gerarPDFRelatorio();
+                const uint8 = new Uint8Array(pdfBuffer);
+                let binary = '';
+                uint8.forEach(b => binary += String.fromCharCode(b));
+                pdfBase64 = btoa(binary);
+                console.log(`PDF gerado: ${Math.round(pdfBase64.length/1024)}KB`);
+            } catch(err) {
+                console.error('Erro ao gerar PDF:', err);
+            }
+
+            if (statusEl) statusEl.innerText = 'Enviando emails...';
+            if (btnEl) btnEl.innerText = '⏳ Enviando...';
+
+            let enviados = 0, erros = 0;
+
+            for (const email of destinatarios) {
+                try {
+                    // Monta corpo do email
+                    const corpoEmail = buildCorpoEmail(data);
+
+                    // Envia via Google Apps Script (Gmail direto)
+                    const payload = {
+                        to:        [email],
+                        subject:   `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
+                        body:      corpoEmail,
+                        pdfBase64: pdfBase64 || null,
+                        pdfName:   `PDE-Relatorio-${TODAY_ISO}.pdf`,
+                    };
+
+                    const resp = await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
+                        method:  'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify(payload),
+                    });
+
+                    const result = await resp.json();
+                    if (!result.success) throw new Error(result.error || 'Erro ao enviar');
+                    enviados++;
+                } catch(err) {
+                    console.error('Erro ao enviar para', email, err);
+                    erros++;
+                }
+            }
+
+            if (btnEl) { btnEl.innerText = '✉ ENVIAR RELATÓRIO'; btnEl.disabled = false; }
+            const msg = erros === 0
+                ? `✅ Relatório enviado para ${enviados} destinatário(s) em ${data.dataGeracao}.`
+                : `⚠️ ${enviados} enviados, ${erros} falharam.`;
+            if (statusEl) statusEl.innerText = msg;
+            if (!isAuto) alert(msg);
+
+            // Salva log
+            await window.saveEmailLog({ id: Date.now(), key: `relatorio_${TODAY_ISO}`, taskId: 'semanal', taskTitle: 'Relatório Semanal', recipient: destinatarios.join(', '), motivo: `Sprint ${data.sprintStart}–${data.sprintEnd}`, tipo: isAuto ? 'auto' : 'manual', sentAt: Date.now() });
+        }
+
+        function buildCorpoEmail(data) {
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const EMOJIS = { "BE GARDEN":"🟢", "BE BONIFACIO":"🟡", "BE DUMONT":"🔴", "BE SÃO PAULO":"🟣" };
+            let corpo = `Bom dia, time!\n\nSegue o resumo do PDE para a reunião de hoje.\n\n`;
+            corpo += `━━━ RESUMO GERAL ━━━\n`;
+            corpo += `📊 Total de atividades: ${data.total}\n`;
+            corpo += `✅ Em andamento: ${data.andamento}\n`;
+            corpo += `🔴 Atrasadas: ${data.atrasadas}\n`;
+            corpo += `✔️ Concluídas: ${data.concluido}\n`;
+            corpo += `⏳ Pendentes: ${data.pendente}\n\n`;
+            corpo += `━━━ POR EMPREENDIMENTO ━━━\n`;
+            EMPS.forEach(emp => {
+                const rows = data.byEmp[emp] || [];
+                if (rows.length === 0) return;
+                const atrasadas = rows.filter(r => r.status === 'ATRASO').length;
+                const emoji = EMOJIS[emp] || '⚫';
+                const atrasadasStr = atrasadas > 0 ? `  |  ${atrasadas} atrasada${atrasadas>1?'s':''}` : '';
+                corpo += `${emoji} ${emp} — ${rows.length} atividade${rows.length!==1?'s':''}${atrasadasStr}\n`;
+            });
+            corpo += `\nO relatório completo em PDF está em anexo.\n\nPDE — BE A Moradia do Futuro | DBVO Hub`;
+            return corpo;
+        }
+
+        function buildPorEmpreendimento(data) {
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const EMOJIS = { "BE GARDEN":"🟢", "BE BONIFACIO":"🟡", "BE DUMONT":"🔴", "BE SÃO PAULO":"🟣" };
+            return EMPS.map(emp => {
+                const rows = data.byEmp[emp] || [];
+                if (rows.length === 0) return null;
+                const atrasadas = rows.filter(r => r.status === 'ATRASO').length;
+                const emoji = EMOJIS[emp] || '⚫';
+                const label = emp.replace('BE ','BE ');
+                const atrasadasStr = atrasadas > 0 ? `  |  ${atrasadas} atrasada${atrasadas>1?'s':''}` : '';
+                return `${emoji} ${label} — ${rows.length} atividade${rows.length!==1?'s':''}${atrasadasStr}`;
+            }).filter(Boolean).join('\n');
+        }
+
+        // ── Gera e baixa o PPT ──
+        function downloadRelatorioSemanal() {
+            const data = buildRelatorioData();
+            if (data.total === 0) {
+                alert('Nenhuma atividade com atualização nos últimos 7 dias.\n\nDica: ajuste o filtro de Sprint para incluir o período desejado.');
+                return;
+            }
+            gerarPPTRelatorio(data);
+        }
+
+        function gerarPPTRelatorio(data) {
+            const PRETO   = "111111";
+            const BRANCO  = "FFFFFF";
+            const CINZA_E = "646464";
+            const CINZA_C = "C8C8C8";
+            const CINZA_BG= "F5F5F5";
+            const EMP_COLORS_PPT = { "BE GARDEN":"46B276", "BE BONIFACIO":"FCBF44", "BE DUMONT":"992C1A", "BE SÃO PAULO":"7247F6" };
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+
+            function statusColorPPT(s) {
+                if (s==="ATRASO")    return "992C1A";
+                if (s==="CONCLUÍDO"||s==="CONCLUIDO") return "2D6A4F";
+                if (s==="ANDAMENTO") return "444444";
+                return "888888";
+            }
+            function statusBgPPT(s) {
+                if (s==="ATRASO")    return "FEE2E2";
+                if (s==="CONCLUÍDO"||s==="CONCLUIDO") return "D1FAE5";
+                if (s==="ANDAMENTO") return "F0F0F0";
+                return "F5F5F5";
+            }
+
+            const pres = new PptxGenJS();
+            pres.layout = "LAYOUT_WIDE";
+
+            const COLS = [
+                { label:"ATIVIDADE",          x:0.15, w:2.8  },
+                { label:"RESPONSÁVEL",         x:3.05, w:1.5  },
+                { label:"SETOR",               x:4.6,  w:1.3  },
+                { label:"PRAZO",               x:5.95, w:1.0  },
+                { label:"STATUS",              x:7.05, w:1.1  },
+                { label:"ÚLTIMA ATUALIZAÇÃO",  x:8.25, w:5.0  },
+            ];
+            const ROWS_PER_SLIDE = 8;
+            const ROW_H  = 0.67;
+            const START_Y= 1.72;
+            const HDR_Y  = 1.28;
+
+            // CAPA
+            const sc = pres.addSlide();
+            sc.background = { color: PRETO };
+            sc.addText("REUNIÃO SEMANAL", { x:3.2, y:2.0, w:9.5, h:0.8, fontSize:38, bold:true, color:BRANCO, fontFace:"Arial Black", charSpacing:4, margin:0 });
+            sc.addText("RELATÓRIO DE ATIVIDADES", { x:3.2, y:2.85, w:9.5, h:0.5, fontSize:16, color:CINZA_C, fontFace:"Arial", charSpacing:6, margin:0 });
+            sc.addShape(pres.shapes.RECTANGLE, { x:3.2, y:3.55, w:0.06, h:0.5, fill:{color:CINZA_E}, line:{color:CINZA_E} });
+            sc.addText(`${data.dataGeracao}  ·  Sprint: ${data.sprintStart} – ${data.sprintEnd}`, { x:3.42, y:3.52, w:9, h:0.55, fontSize:13, color:CINZA_C, fontFace:"Arial", margin:0 });
+            const kpis = [
+                { label:"TOTAL",     val:data.total,     color:BRANCO   },
+                { label:"ANDAMENTO", val:data.andamento, color:"46B276" },
+                { label:"ATRASADAS", val:data.atrasadas, color:"FF6B6B" },
+                { label:"CONCLUÍDAS",val:data.concluido, color:CINZA_C  },
+                { label:"PENDENTES", val:data.pendente,  color:CINZA_E  },
+            ];
+            kpis.forEach((k,i) => {
+                const x = 3.2 + i * 2.0;
+                sc.addShape(pres.shapes.RECTANGLE, { x, y:4.5, w:1.85, h:1.6, fill:{color:"1A1A1A"}, line:{color:"2A2A2A"} });
+                sc.addText(String(k.val), { x, y:4.6, w:1.85, h:0.8, fontSize:36, bold:true, color:k.color, fontFace:"Arial Black", align:"center", margin:0 });
+                sc.addText(k.label, { x, y:5.4, w:1.85, h:0.4, fontSize:8, bold:true, color:CINZA_E, fontFace:"Arial", align:"center", charSpacing:2, margin:0 });
+            });
+            sc.addText("BE A MORADIA DO FUTURO  ·  DBVO HUB  ·  CONFIDENCIAL", { x:0.28, y:7.1, w:13, h:0.3, fontSize:7, color:CINZA_E, fontFace:"Arial", charSpacing:2, align:"center", margin:0 });
+
+            // SLIDES POR EMPREENDIMENTO
+            EMPS.forEach(emp => {
+                const rows = data.byEmp[emp] || [];
+                const chunks = [];
+                if (rows.length === 0) { chunks.push([]); }
+                else { for (let i=0; i<rows.length; i+=ROWS_PER_SLIDE) chunks.push(rows.slice(i,i+ROWS_PER_SLIDE)); }
+                chunks.forEach((chunk, ci) => {
+                    const s = pres.addSlide();
+                    s.background = { color: BRANCO };
+                    const empColor = EMP_COLORS_PPT[emp] || CINZA_E;
+                    s.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:13.33, h:1.1, fill:{color:PRETO}, line:{color:PRETO} });
+                    s.addShape(pres.shapes.RECTANGLE, { x:0, y:1.1, w:13.33, h:0.06, fill:{color:empColor}, line:{color:empColor} });
+                    s.addText(emp, { x:0.35, y:0.12, w:8, h:0.55, fontSize:22, bold:true, color:BRANCO, fontFace:"Arial Black", charSpacing:3, margin:0 });
+                    s.addText(`${data.dataGeracao}  ·  Sprint: ${data.sprintStart}–${data.sprintEnd}`, { x:0.35, y:0.68, w:9, h:0.3, fontSize:8, color:CINZA_C, fontFace:"Arial", charSpacing:1, margin:0 });
+                    if (chunks.length > 1) s.addText(`${ci+1}/${chunks.length}`, { x:12.8, y:0.15, w:0.4, h:0.4, fontSize:10, color:CINZA_C, fontFace:"Arial", align:"center", margin:0 });
+                    s.addText("BE", { x:12.6, y:0.55, w:0.6, h:0.4, fontSize:14, bold:true, color:BRANCO, fontFace:"Arial Black", align:"center", margin:0 });
+
+                    s.addShape(pres.shapes.RECTANGLE, { x:0, y:HDR_Y, w:13.33, h:0.38, fill:{color:CINZA_BG}, line:{color:"E0E0E0"} });
+                    COLS.forEach(c => s.addText(c.label, { x:c.x, y:HDR_Y+0.04, w:c.w, h:0.3, fontSize:7, bold:true, color:CINZA_E, fontFace:"Arial", charSpacing:1, margin:0 }));
+
+                    if (chunk.length === 0) {
+                        s.addText("Nenhuma atividade atualizada neste período.", { x:0.5, y:3.5, w:12, h:0.5, fontSize:12, color:CINZA_C, fontFace:"Arial", align:"center", italic:true, margin:0 });
+                    } else {
+                        chunk.forEach((atv, ri) => {
+                            const y = START_Y + ri * ROW_H;
+                            const bg = ri%2===0 ? BRANCO : "FAFAFA";
+                            s.addShape(pres.shapes.RECTANGLE, { x:0, y, w:13.33, h:ROW_H-0.03, fill:{color:bg}, line:{color:"EBEBEB", width:0.3} });
+                            s.addShape(pres.shapes.RECTANGLE, { x:0, y:y+0.04, w:0.05, h:ROW_H-0.1, fill:{color:empColor}, line:{color:empColor} });
+                            s.addText(atv.titulo,  { x:COLS[0].x, y:y+0.04, w:COLS[0].w, h:ROW_H-0.1, fontSize:7.5, bold:true, color:PRETO,   fontFace:"Arial", valign:"top", margin:0 });
+                            s.addText(atv.resp,    { x:COLS[1].x, y:y+0.04, w:COLS[1].w, h:ROW_H-0.1, fontSize:7,   color:"444444", fontFace:"Arial", valign:"top", margin:0 });
+                            s.addText(atv.setor,   { x:COLS[2].x, y:y+0.04, w:COLS[2].w, h:ROW_H-0.1, fontSize:6.5, color:CINZA_E, fontFace:"Arial", valign:"top", italic:true, margin:0 });
+                            s.addText(atv.prazo,   { x:COLS[3].x, y:y+0.04, w:COLS[3].w, h:ROW_H-0.1, fontSize:7,   color:"444444", fontFace:"Arial", valign:"top", margin:0 });
+                            s.addShape(pres.shapes.RECTANGLE, { x:COLS[4].x, y:y+0.12, w:1.05, h:0.28, fill:{color:statusBgPPT(atv.status)}, line:{color:statusColorPPT(atv.status), width:0.5} });
+                            s.addText(atv.status, { x:COLS[4].x, y:y+0.12, w:1.05, h:0.28, fontSize:6, bold:true, color:statusColorPPT(atv.status), fontFace:"Arial", align:"center", valign:"middle", margin:0 });
+                            const histTrunc = atv.hist.length>200 ? atv.hist.substring(0,197)+"..." : atv.hist;
+                            s.addText(histTrunc, { x:COLS[5].x, y:y+0.04, w:COLS[5].w, h:ROW_H-0.1, fontSize:7, color:"555555", fontFace:"Arial", valign:"top", margin:0 });
+                        });
+                    }
+                    s.addShape(pres.shapes.RECTANGLE, { x:0, y:7.2, w:13.33, h:0.3, fill:{color:PRETO}, line:{color:PRETO} });
+                    s.addText("BE A MORADIA DO FUTURO  ·  DBVO HUB", { x:0.35, y:7.22, w:13, h:0.26, fontSize:7, color:CINZA_E, fontFace:"Arial", charSpacing:2, margin:0 });
+                });
+            });
+
+            // SLIDE FINAL PONTOS DE ATENÇÃO
+            if (data.atrasadasList.length > 0) {
+                const sf = pres.addSlide();
+                sf.background = { color: PRETO };
+                sf.addShape(pres.shapes.RECTANGLE, { x:0, y:0, w:0.12, h:7.5, fill:{color:"992C1A"}, line:{color:"992C1A"} });
+                sf.addText("PONTOS DE ATENÇÃO", { x:0.5, y:0.5, w:12, h:0.7, fontSize:28, bold:true, color:BRANCO, fontFace:"Arial Black", charSpacing:4, margin:0 });
+                sf.addText(`Sprint ${data.sprintStart}–${data.sprintEnd}  ·  ${data.dataGeracao}`, { x:0.5, y:1.22, w:10, h:0.35, fontSize:10, color:CINZA_C, fontFace:"Arial", charSpacing:2, margin:0 });
+                sf.addShape(pres.shapes.LINE, { x:0.5, y:1.62, w:12.5, h:0, line:{color:CINZA_E, width:0.5} });
+                sf.addShape(pres.shapes.RECTANGLE, { x:0.5, y:1.75, w:12.5, h:0.35, fill:{color:"1A1A1A"}, line:{color:"2A2A2A"} });
+                sf.addText("🚨  ATIVIDADES ATRASADAS", { x:0.55, y:1.77, w:12, h:0.3, fontSize:9, bold:true, color:"FF6B6B", fontFace:"Arial", charSpacing:2, margin:0 });
+                const ROW_H_A = 0.48;
+                data.atrasadasList.slice(0,15).forEach((atv, i) => {
+                    const y = 2.15 + i * ROW_H_A;
+                    if (y > 6.85) return;
+                    const bg = i%2===0 ? "1A0A0A" : "150808";
+                    sf.addShape(pres.shapes.RECTANGLE, { x:0.5, y, w:12.5, h:ROW_H_A-0.03, fill:{color:bg}, line:{color:"2A1A1A"} });
+                    sf.addShape(pres.shapes.RECTANGLE, { x:0.5, y:y+0.04, w:0.05, h:ROW_H_A-0.1, fill:{color:"992C1A"}, line:{color:"992C1A"} });
+                    sf.addText(atv.titulo,       { x:0.65, y:y+0.04, w:3.8,  h:0.22, fontSize:7.5, bold:true, color:BRANCO,   fontFace:"Arial", margin:0 });
+                    sf.addText(`[ ${atv.emp} ]`, { x:0.65, y:y+0.26, w:3.8,  h:0.18, fontSize:6.5, color:"992C1A",             fontFace:"Arial", margin:0 });
+                    sf.addText(atv.resp,         { x:4.55, y:y+0.04, w:2.2,  h:0.22, fontSize:7,   color:CINZA_C,              fontFace:"Arial", margin:0 });
+                    sf.addText(`Prazo: ${atv.prazo}`, { x:6.85, y:y+0.04, w:1.5, h:0.22, fontSize:7, color:"FF6B6B", bold:true, fontFace:"Arial", margin:0 });
+                    const ht = atv.hist.length>130 ? atv.hist.substring(0,127)+"..." : atv.hist;
+                    sf.addText(ht, { x:8.45, y:y+0.04, w:4.4, h:ROW_H_A-0.08, fontSize:6.5, color:CINZA_E, fontFace:"Arial", valign:"top", margin:0 });
+                });
+                sf.addText("BE A MORADIA DO FUTURO  ·  DBVO HUB  ·  CONFIDENCIAL", { x:0.28, y:7.15, w:13, h:0.3, fontSize:7, color:CINZA_E, fontFace:"Arial", charSpacing:2, align:"center", margin:0 });
+            }
+
+            const dateStr = TODAY_ISO.replace(/-/g,'');
+            pres.writeFile({ fileName: `PDE-Reuniao-Semanal-${dateStr}.pptx` });
+        }
+        // ══════════════════════════════════════════════════════
+
         function downloadExcel() {
             const tasks = getFilteredTasks();
             if (!tasks.length) return alert('Nenhuma atividade para exportar com os filtros atuais.');
