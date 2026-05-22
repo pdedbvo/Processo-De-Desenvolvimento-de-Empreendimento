@@ -4154,21 +4154,21 @@
                 if (!ok) return;
             }
 
-            if (btnEl) { btnEl.innerText = '⏳ Gerando PPT...'; btnEl.disabled = true; }
+            if (btnEl) { btnEl.innerText = '⏳ Gerando PDF...'; btnEl.disabled = true; }
             const statusEl = document.getElementById('relatorioStatusMsg');
-            if (statusEl) statusEl.innerText = 'Gerando PPT...';
+            if (statusEl) statusEl.innerText = 'Gerando PDF...';
 
-            // Gera PPTX e converte para base64
-            let pptBase64 = '';
+            // Gera PDF e converte para base64
+            let pdfBase64 = '';
             try {
-                const pptBuffer = await gerarPPTRelatorioBuffer(data);
-                const uint8 = new Uint8Array(pptBuffer);
+                const pdfBuffer = await gerarPDFRelatorio();
+                const uint8 = new Uint8Array(pdfBuffer);
                 let binary = '';
                 uint8.forEach(b => binary += String.fromCharCode(b));
-                pptBase64 = btoa(binary);
-                console.log(`PPT gerado: ${Math.round(pptBase64.length/1024)}KB`);
+                pdfBase64 = btoa(binary);
+                console.log(`PDF gerado: ${Math.round(pdfBase64.length/1024)}KB`);
             } catch(err) {
-                console.error('Erro ao gerar PPT:', err);
+                console.error('Erro ao gerar PDF:', err);
             }
 
             if (statusEl) statusEl.innerText = 'Enviando emails...';
@@ -4180,18 +4180,19 @@
 
             for (const email of destinatarios) {
                 try {
-                    const gasUrl = 'https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec';
                     const payload = {
-                        to:       [email],
-                        subject:  `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
-                        htmlBody: corpoEmail,
-                        pptBase64: pptBase64 || null,
-                        pptName:  `PDE-Relatorio-${TODAY_ISO}.pptx`,
+                        to:        [email],
+                        subject:   `[PDE] Reunião Semanal — ${data.dataGeracao.replace(/\//g,'.')}`,
+                        htmlBody:  corpoEmail,
+                        pdfBase64: pdfBase64 || null,
+                        pdfName:   `PDE-Relatorio-${TODAY_ISO}.pdf`,
                     };
 
-                    await fetch(`${gasUrl}?data=${encodeURIComponent(JSON.stringify(payload))}`, {
-                        method: 'GET',
-                        mode:   'no-cors',
+                    await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
+                        method:  'POST',
+                        mode:    'no-cors',
+                        headers: { 'Content-Type': 'application/json' },
+                        body:    JSON.stringify(payload),
                     });
                     enviados++;
                 } catch(err) {
