@@ -757,12 +757,6 @@
                     <button onclick="downloadPDF()" style="background:#111111;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
                         ⬇ PDF
                     </button>
-                    <button onclick="downloadRelatorioSemanal()" style="background:#2d3e6f;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
-                        📊 PPT SEMANAL
-                    </button>
-                    <button onclick="enviarRelatorioEmail(this)" style="background:#5b3fa6;" class="flex items-center gap-2 hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
-                        ✉ ENVIAR RELATÓRIO
-                    </button>
                 </div>
             </div>
 
@@ -2490,9 +2484,10 @@
         }
 
         // Calcula quais emails devem ser disparados hoje
-        // CORREÇÃO: usa <= em vez de === e recupera emails perdidos (janela de 7 dias)
         function calcPendingEmails() {
             const hoje = TODAY_ISO;
+            const hojeDate = new Date(hoje + 'T00:00:00');
+            const diaSemana = hojeDate.getDay(); // 0=dom,1=seg,2=ter,3=qua,4=qui,5=sex,6=sab
             const pending = [];
 
             (window.tasks || []).forEach(t => {
@@ -2501,41 +2496,38 @@
                 if (owners.length === 0) return;
 
                 const deadlineDate = new Date(t.deadline + 'T00:00:00');
-                const hojeDate    = new Date(hoje + 'T00:00:00');
-                const diffDays    = Math.round((deadlineDate - hojeDate) / (1000 * 60 * 60 * 24));
+                const diffDays = Math.round((deadlineDate - hojeDate) / (1000 * 60 * 60 * 24));
+                const isAtrasada = t.status === 'atraso' || diffDays < 0;
 
-                const isAtrasada = t.status === 'atraso';
-
-                // Regra 1: Faltam até 2 dias (inclui dia anterior que o sistema não abriu)
-                // Janela: de -7 até +1 (até 1 semana depois do prazo recupera)
-                if (diffDays <= 1 && diffDays >= -7 && t.status !== 'atraso') {
-                    const key = emailKey(t.id, '1d', hoje);
-                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
-                    if (!jaEnviado) {
-                        const motivo = diffDays <= 0
-                            ? `Prazo venceu há ${Math.abs(diffDays)} dia(s) — lembrete não enviado`
-                            : 'Falta 1 dia para o prazo';
-                        pending.push({ task: t, owners, trigger: '1d', motivo, key });
-                    }
-                }
-
-                // Regra 2: Atrasadas — avisa quando o sistema abrir (janela semanal)
-                // Para atrasadas, envia 1x por semana enquanto continuar atrasada
-                if (isAtrasada) {
-                    const key = emailKey(t.id, 'atraso', hoje);
-                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
-                    const diasAtraso = calcDiasAtraso(t);
-                    if (!jaEnviado) {
-                        pending.push({ task: t, owners, trigger: 'atraso', motivo: `Em ATRASO há ${diasAtraso} dia(s)`, key });
-                    }
-                }
-
-                // Regra 3: Faltam até 3 dias → aviso antecipado para qualquer status ativo
-                if (diffDays <= 3 && diffDays > 1) {
+                // ── Regra 1: Lembrete 3 dias antes ─────────────────
+                // Envia 1x só quando faltam exatamente 3 dias
+                if (diffDays === 3 && !isAtrasada) {
                     const key = emailKey(t.id, '3d', hoje);
                     const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
                     if (!jaEnviado) {
-                        pending.push({ task: t, owners, trigger: '3d', motivo: `Faltam ${diffDays} dias para o prazo`, key });
+                        pending.push({ task: t, owners, trigger: '3d', motivo: 'Faltam 3 dias para o prazo', key });
+                    }
+                }
+
+                // ── Regra 2: No dia do vencimento ──────────────────
+                // Envia 1x no dia exato do prazo
+                if (diffDays === 0) {
+                    const key = emailKey(t.id, 'vence_hoje', hoje);
+                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
+                    if (!jaEnviado) {
+                        pending.push({ task: t, owners, trigger: 'vence_hoje', motivo: 'Atividade vence hoje!', key });
+                    }
+                }
+
+                // ── Regra 3: Atrasadas — quarta (3) e sexta (5) ────
+                if (isAtrasada && (diaSemana === 3 || diaSemana === 5)) {
+                    // Chave inclui semana do ano para não repetir na mesma semana/dia
+                    const weekKey = `${hoje.substring(0,7)}-w${diaSemana}`;
+                    const key = emailKey(t.id, 'atraso', weekKey);
+                    const jaEnviado = (window.emailLogs || []).some(l => l.key === key);
+                    const diasAtraso = calcDiasAtraso(t);
+                    if (!jaEnviado) {
+                        pending.push({ task: t, owners, trigger: 'atraso', motivo: `Em atraso há ${diasAtraso} dia(s)`, key });
                     }
                 }
             });
@@ -2663,40 +2655,62 @@
 
         // Função interna: envia emails de um item pendente e salva log
         async function _dispatchEmailItem(item, tipo) {
-            const { task: t, owners, motivo, key } = item;
+            const { task: t, owners, motivo, key, trigger } = item;
             let enviados = 0, semEmail = 0;
+            const GESTOR_EMAIL = 'sergio.f@edificabpo.com.br';
 
+            // Determina assunto pelo trigger
+            const subjects = {
+                '3d':        `[PDE] Lembrete: "${t.title}" vence em 3 dias`,
+                'vence_hoje': `[PDE] ⚠️ "${t.title}" vence hoje!`,
+                'atraso':    `[PDE] 🔴 "${t.title}" está em atraso`,
+            };
+            const subject = subjects[trigger] || `[PDE] Lembrete: ${t.title}`;
+
+            // Envia para cada responsável
+            const emailsEnviados = new Set();
             for (const name of owners) {
                 const u = (window.users || []).find(u => u.name === name);
                 if (!u || !u.email) { semEmail++; continue; }
-
-                const prazo = t.deadline ? t.deadline.split('-').reverse().join('/') : 'Não definido';
                 try {
-                    const htmlBody = buildEmailLembrete(t, name, motivo);
-                    await enviarViaGAS(u.email, `[PDE] Lembrete: ${t.title}`, htmlBody);
-
-                    // Salva log no Firebase
-                    const logId = Date.now() + Math.random();
-                    await window.saveEmailLog({
-                        id:        logId,
-                        key,
-                        taskId:    t.id,
-                        taskTitle: t.title,
-                        recipient: `${name} (${u.email})`,
-                        motivo,
-                        tipo,
-                        sentAt:    Date.now()
-                    });
+                    const htmlBody = buildEmailLembrete(t, name, trigger === 'atraso' ? 'atraso' : 'prazo');
+                    await enviarViaGAS(u.email, subject, htmlBody);
+                    emailsEnviados.add(u.email);
                     enviados++;
                 } catch(err) {
-                    console.error('Erro ao enviar email automático para', u.email, err);
+                    console.error('Erro ao enviar para', u.email, err);
                 }
             }
+
+            // Envia cópia para o gestor (se não for já destinatário)
+            if (!emailsEnviados.has(GESTOR_EMAIL)) {
+                try {
+                    const htmlBody = buildEmailLembrete(t, 'Gestor', trigger === 'atraso' ? 'atraso' : 'prazo');
+                    await enviarViaGAS(GESTOR_EMAIL, `[CÓPIA] ${subject}`, htmlBody);
+                } catch(err) {
+                    console.error('Erro ao enviar cópia para gestor', err);
+                }
+            }
+
+            // Salva log no Firebase
+            if (enviados > 0) {
+                const logId = Date.now() + Math.random();
+                await window.saveEmailLog({
+                    id:        logId,
+                    key,
+                    taskId:    t.id,
+                    taskTitle: t.title,
+                    recipient: owners.join(', '),
+                    motivo,
+                    tipo,
+                    sentAt:    Date.now()
+                });
+            }
+
             return { enviados, semEmail };
         }
 
-        // Toggle do envio automático — persiste no localStorage
-        // Padrão: PAUSADO (0) na primeira abertura
+        // Toggle do envio automático
         if (localStorage.getItem('pde_autoEmail') === null) {
             localStorage.setItem('pde_autoEmail', '0');
         }
