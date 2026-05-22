@@ -2448,17 +2448,8 @@
 
             for (const r of comEmail) {
                 try {
-                    await emailjs.send('service_al37c0d', 'template_9kuc2xo', {
-                        to_email:    r.email,
-                        to_name:     r.name,
-                        owner_name:  r.name,
-                        title:       t.title,
-                        project:     t.project  || '',
-                        sector:      t.sector   || '',
-                        owners:      owners.join(', '),
-                        deadline:    prazo,
-                        status:      (t.status  || '').toUpperCase(),
-                    });
+                    const htmlBody = buildEmailLembrete(t, r.name, t.status === 'atraso' ? 'atraso' : 'prazo');
+                    await enviarViaGAS(r.email, `[PDE] Lembrete: ${t.title}`, htmlBody);
                     enviados++;
                 } catch (err) {
                     console.error('Erro ao enviar para', r.email, err);
@@ -2681,17 +2672,8 @@
 
                 const prazo = t.deadline ? t.deadline.split('-').reverse().join('/') : 'Não definido';
                 try {
-                    await emailjs.send('service_al37c0d', 'template_9kuc2xo', {
-                        to_email:   u.email,
-                        to_name:    name,
-                        owner_name: name,
-                        title:      t.title,
-                        project:    t.project  || '',
-                        sector:     t.sector   || '',
-                        owners:     owners.join(', '),
-                        deadline:   prazo,
-                        status:     (t.status  || '').toUpperCase(),
-                    });
+                    const htmlBody = buildEmailLembrete(t, name, motivo);
+                    await enviarViaGAS(u.email, `[PDE] Lembrete: ${t.title}`, htmlBody);
 
                     // Salva log no Firebase
                     const logId = Date.now() + Math.random();
@@ -3867,7 +3849,76 @@
         // ══════════════════════════════════════════════════════
 
         // ══════════════════════════════════════════════════════
-        // RELATÓRIO SEMANAL — PPT + EMAIL
+        // ENVIO DE EMAIL VIA GOOGLE APPS SCRIPT
+        // ══════════════════════════════════════════════════════
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec';
+
+        async function enviarViaGAS(to, subject, htmlBody) {
+            await fetch(GAS_URL, {
+                method:  'POST',
+                mode:    'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body:    JSON.stringify({ to: [to], subject, htmlBody }),
+            });
+        }
+
+        function buildEmailLembrete(t, ownerName, motivo) {
+            const projs = Array.isArray(t.projects) && t.projects.length ? t.projects.join(', ') : (t.project || '');
+            const prazo = t.deadline ? t.deadline.split('-').reverse().join('/') : 'Não definido';
+            const status = (t.status || '').toUpperCase();
+            const isAtraso = t.status === 'atraso';
+            const EMP_COLORS = { "BE GARDEN":"#46B276", "BE BONIFACIO":"#FCBF44", "BE DUMONT":"#992C1A", "BE SÃO PAULO":"#7247F6" };
+            const empColor = EMP_COLORS[projs.toUpperCase()] || '#646464';
+            const statusColor = isAtraso ? '#992C1A' : '#2D6A4F';
+            const statusBg    = isAtraso ? '#fff5f5'  : '#f0faf5';
+            const motivoLabel = motivo === 'atraso' ? '⚠️ Atividade em atraso' : '📅 Prazo se aproximando';
+
+            return `
+<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#111111;">
+  <div style="background:#111111;padding:20px 28px;border-radius:8px 8px 0 0;">
+    <div style="font-size:10px;color:#C8C8C8;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">BE A Moradia do Futuro</div>
+    <div style="color:white;font-size:20px;font-weight:bold;">Lembrete de Atividade</div>
+    <div style="color:#646464;font-size:12px;margin-top:4px;">${motivoLabel}</div>
+  </div>
+  <div style="height:4px;background:linear-gradient(90deg,#46B276 25%,#FCBF44 25% 50%,#992C1A 50% 75%,#7247F6 75%);"></div>
+  <div style="border:1px solid #e2e8f0;border-top:none;padding:24px 28px;border-radius:0 0 8px 8px;">
+    <p style="margin:0 0 20px;font-size:14px;">Olá, <strong>${ownerName}</strong>! Você tem uma atividade que precisa de atenção.</p>
+
+    <div style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <div style="background:#f5f5f5;padding:12px 16px;border-bottom:1px solid #e2e8f0;">
+        <div style="font-size:15px;font-weight:bold;color:#111111;">${t.title}</div>
+        <div style="font-size:12px;color:#888;margin-top:4px;">
+          <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${empColor};margin-right:5px;vertical-align:middle;"></span>
+          ${projs}${t.sector ? ' &nbsp;·&nbsp; ' + t.sector : ''}
+        </div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;">
+        <tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:10px 16px;font-size:12px;color:#888;width:40%;">Prazo</td>
+          <td style="padding:10px 16px;font-size:13px;font-weight:bold;color:${isAtraso ? '#992C1A' : '#111111'};">${prazo}</td>
+        </tr>
+        <tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:10px 16px;font-size:12px;color:#888;">Status</td>
+          <td style="padding:10px 16px;">
+            <span style="background:${statusBg};color:${statusColor};font-size:11px;font-weight:bold;padding:3px 10px;border-radius:4px;text-transform:uppercase;">${status}</span>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:10px 16px;font-size:12px;color:#888;">Responsável(eis)</td>
+          <td style="padding:10px 16px;font-size:13px;color:#111111;">${Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner || ownerName)}</td>
+        </tr>
+      </table>
+    </div>
+
+    <p style="font-size:12px;color:#888;margin:0 0 20px;">Acesse o sistema PDE para atualizar o status desta atividade.</p>
+
+    <div style="border-top:1px solid #e2e8f0;padding-top:16px;">
+      <img src="https://pdedbvo.github.io/Processo-De-Desenvolvimento-de-Empreendimento/assinatura.png" alt="DBVO Hub" style="max-width:240px;height:auto;">
+    </div>
+  </div>
+</div>`;
+        }
+        // ══════════════════════════════════════════════════════
         // ══════════════════════════════════════════════════════
 
         // ── Configurações de destinatários (Firebase configs) ──
