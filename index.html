@@ -2452,13 +2452,16 @@
                 }
             }
 
-            // Cópia para o gestor
-            try {
-                const subject = `[CÓPIA] [PDE] Lembrete: ${t.title}`;
-                const htmlBody = buildEmailLembrete(t, owners.join(', '), t.status === 'atraso' ? 'atraso' : 'prazo');
-                await enviarViaGAS(GESTOR_EMAIL, subject, htmlBody);
-            } catch(err) {
-                console.error('Erro ao enviar cópia para gestor', err);
+            // Cópia para o gestor (só se ele não for já destinatário)
+            const jaDestinatario = comEmail.some(r => r.email === GESTOR_EMAIL);
+            if (!jaDestinatario) {
+                try {
+                    const subject = `[CÓPIA] [PDE] Lembrete: ${t.title}`;
+                    const htmlBody = buildEmailLembrete(t, owners.join(', '), t.status === 'atraso' ? 'atraso' : 'prazo');
+                    await enviarViaGAS(GESTOR_EMAIL, subject, htmlBody);
+                } catch(err) {
+                    console.error('Erro ao enviar cópia para gestor', err);
+                }
             }
 
             btnEl.disabled = false;
@@ -2692,13 +2695,16 @@
                 }
             }
 
-            // Envia cópia para o gestor sempre (independente de ser responsável)
-            try {
-                const nomeResp = owners.join(', ');
-                const htmlBodyGestor = buildEmailLembrete(t, nomeResp, trigger === 'atraso' ? 'atraso' : 'prazo');
-                await enviarViaGAS(GESTOR_EMAIL, `[CÓPIA] ${subject}`, htmlBodyGestor);
-            } catch(err) {
-                console.error('Erro ao enviar cópia para gestor', err);
+            // Cópia para o gestor (só se ele não for já destinatário)
+            const gestorJaDestinatario = emailsEnviados.has(GESTOR_EMAIL);
+            if (!gestorJaDestinatario) {
+                try {
+                    const nomeResp = owners.join(', ');
+                    const htmlBodyGestor = buildEmailLembrete(t, nomeResp, trigger === 'atraso' ? 'atraso' : 'prazo');
+                    await enviarViaGAS(GESTOR_EMAIL, `[CÓPIA] ${subject}`, htmlBodyGestor);
+                } catch(err) {
+                    console.error('Erro ao enviar cópia para gestor', err);
+                }
             }
 
             // Salva log no Firebase
@@ -4396,7 +4402,8 @@
         // Versão que baixa o arquivo
         function gerarPPTRelatorio(data) {
             const pres = _buildPPTPresentation(data);
-            return pres;
+            const dateStr = TODAY_ISO.replace(/-/g,'');
+            pres.writeFile({ fileName: `PDE-Reuniao-Semanal-${dateStr}.pptx` });
         }
 
         // Constrói a apresentação (compartilhado entre download e email)
