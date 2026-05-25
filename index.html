@@ -1605,7 +1605,12 @@
                 <input type="text" value="${text}" placeholder="Avanço..." class="hist-text flex-1 p-1 border-none text-[11px] outline-none">
                 <button onclick="this.parentElement.remove()" class="text-rose-300 hover:text-rose-500 px-2">✕</button>
             `;
-            container.prepend(div);
+            // Novo registro (sem texto) vai pro topo, histórico existente appenda em ordem
+            if (text === '') {
+                container.prepend(div);
+            } else {
+                container.appendChild(div);
+            }
         }
 
         function getHistoryData() {
@@ -1889,7 +1894,11 @@
             document.getElementById('btnReprogramar').classList.remove('hidden');
             document.getElementById('editDeadline').readOnly = true;
             document.getElementById('historyContainer').innerHTML = '';
-            try { JSON.parse(t.notes || '[]').forEach(h => addHistoryLine(h.date, h.text)); } catch(e) {}
+            try { 
+                const entries = JSON.parse(t.notes || '[]');
+                entries.sort((a, b) => b.date.localeCompare(a.date));
+                entries.forEach(h => addHistoryLine(h.date, h.text)); 
+            } catch(e) {}
             // Carrega responsáveis (suporte a string legada e array novo)
             const owners = Array.isArray(t.owners) ? t.owners : (t.owner ? [t.owner] : []);
             setSelectedOwners(owners);
