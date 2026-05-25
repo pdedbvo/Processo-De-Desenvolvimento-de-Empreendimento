@@ -486,6 +486,7 @@
             scheduleAutoEmailCheck();
             scheduleDesktopNotifications();
             checkRelatorioSemanal();
+            checkRelatorioCompleto();
         });
 
         onSnapshot(usersCol, (snap) => {
@@ -1160,7 +1161,7 @@
                     <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">📊 Relatório Semanal de Reunião</h2>
                     <p class="text-[10px] text-slate-400 mt-1">
                         Gera um PPT e envia por email automaticamente toda segunda-feira ao abrir o sistema.
-                        <span class="text-slate-600 font-bold">Inclui todas as atividades com atualização no histórico nos últimos 7 dias.</span>
+                        <span class="text-slate-600 font-bold">Inclui atividades com atualização no histórico nos últimos 7 dias.</span>
                     </p>
                 </div>
                 <div class="flex gap-2 items-center flex-wrap">
@@ -1168,18 +1169,44 @@
                         class="px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2">
                     </button>
                     <button onclick="downloadRelatorioSemanal()" style="background:#2d3e6f;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
-                        📊 GERAR PPT AGORA
+                        📊 GERAR PPT
                     </button>
                     <button onclick="enviarRelatorioEmail(this)" style="background:#5b3fa6;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
-                        ✉ ENVIAR POR EMAIL
+                        ✉ ENVIAR EMAIL
                     </button>
                 </div>
             </div>
 
-            <!-- Destinatários -->
-            <div class="mt-4">
-                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-2">Destinatários do Relatório</label>
-                <p class="text-[10px] text-slate-400 mb-3">Adicione os emails que devem receber o relatório semanal. Separados do envio de lembretes de prazo.</p>
+            <!-- Separador -->
+            <div class="border-t border-slate-100 my-5"></div>
+
+            <!-- Relatório Completo -->
+            <div class="flex flex-wrap justify-between items-center mb-4 gap-3">
+                <div>
+                    <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">📋 Relatório Completo</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">
+                        Todas as atividades ativas com a última atualização registrada, independente da data.
+                        <span class="text-slate-600 font-bold">Disparado automaticamente toda terça-feira ao abrir o sistema.</span>
+                    </p>
+                </div>
+                <div class="flex gap-2 items-center flex-wrap">
+                    <button onclick="toggleRelatorioCompletoAuto()" id="btnRelatorioCompletoToggle"
+                        class="px-4 py-2 rounded-lg font-bold text-xs shadow transition-all border-2">
+                    </button>
+                    <button onclick="downloadRelatorioCompleto()" style="background:#2d3e6f;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        📊 GERAR PPT
+                    </button>
+                    <button onclick="enviarRelatorioCompletoEmail(this)" style="background:#5b3fa6;" class="hover:opacity-80 text-white px-4 py-2 rounded-lg font-bold text-xs shadow transition-all">
+                        ✉ ENVIAR EMAIL
+                    </button>
+                </div>
+            </div>
+            <p id="relatorioCompletoStatusMsg" class="text-[10px] font-bold text-slate-400 mb-4"></p>
+
+            <!-- Destinatários (compartilhados) -->
+            <div class="mt-2">
+                <label class="block text-[9px] font-bold text-slate-400 uppercase mb-2">Destinatários (Semanal + Completo)</label>
+                <p class="text-[10px] text-slate-400 mb-3">Os mesmos emails recebem ambos os relatórios.</p>
                 <div class="flex gap-2 mb-3">
                     <input type="email" id="relatorioEmailInput" placeholder="email@empresa.com.br"
                         class="flex-1 p-2 border rounded-md text-xs bg-slate-50 outline-none"
@@ -3966,9 +3993,11 @@
         function loadRelatorioConfig() {
             const cfg = (window.configs && window.configs._relatorio) || {};
             window.relatorioAutoAtivo = cfg.autoAtivo || false;
+            window.relatorioCompletoAutoAtivo = cfg.autoAtivoCompleto || false;
             window.relatorioDestinatarios = cfg.destinatarios || [];
             renderRelatorioDestinatarios();
             updateRelatorioToggleBtn();
+            updateRelatorioCompletoToggleBtn();
         }
 
         async function saveRelatorioConfig() {
@@ -3976,6 +4005,7 @@
                 id: 'relatorio_semanal',
                 type: '_relatorio',
                 autoAtivo: window.relatorioAutoAtivo,
+                autoAtivoCompleto: window.relatorioCompletoAutoAtivo,
                 destinatarios: window.relatorioDestinatarios
             });
         }
@@ -4030,6 +4060,169 @@
         }
 
         // ── Verifica e dispara relatório automático nas segundas ──
+        // ── Relatório Completo ────────────────────────────────
+        window.relatorioCompletoAutoAtivo = false;
+
+        function toggleRelatorioCompletoAuto() {
+            window.relatorioCompletoAutoAtivo = !window.relatorioCompletoAutoAtivo;
+            updateRelatorioCompletoToggleBtn();
+            saveRelatorioConfig();
+        }
+
+        function updateRelatorioCompletoToggleBtn() {
+            const btn = document.getElementById('btnRelatorioCompletoToggle');
+            if (!btn) return;
+            if (window.relatorioCompletoAutoAtivo) {
+                btn.textContent = '✅ Automático ATIVO';
+                btn.style.cssText = 'background:#d1fae5;color:#065f46;border-color:#6ee7b7;';
+            } else {
+                btn.textContent = '⭕ Automático INATIVO';
+                btn.style.cssText = 'background:#f1f5f9;color:#64748b;border-color:#cbd5e1;';
+            }
+        }
+
+        function buildRelatorioCompletoData() {
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const tasks = (window.tasks || []).filter(t => t.status !== 'concluido');
+            const byEmp = {};
+            EMPS.forEach(e => { byEmp[e] = []; });
+
+            tasks.forEach(t => {
+                const projs = Array.isArray(t.projects) && t.projects.length ? t.projects : (t.project ? [t.project] : []);
+                let lastHist = '';
+                try {
+                    const hist = JSON.parse(t.notes || '[]').sort((a,b) => b.date.localeCompare(a.date));
+                    if (hist.length > 0) lastHist = hist[0].date.split('-').reverse().join('/').substring(0,5) + ': ' + hist[0].text;
+                } catch(e) {}
+                const row = {
+                    titulo: t.title || '', resp: (Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : t.owner) || '',
+                    setor: t.sector || '', prazo: t.deadline ? t.deadline.split('-').reverse().join('/') : '-',
+                    status: (t.status || '').toUpperCase(), hist: lastHist
+                };
+                projs.forEach(p => {
+                    const matched = EMPS.find(e => p.toUpperCase().includes(e.replace('BE ','').split(' ')[0]) || e.includes(p.toUpperCase()));
+                    if (matched) byEmp[matched].push(row);
+                });
+            });
+
+            const total = tasks.length;
+            const andamento = tasks.filter(t => t.status === 'andamento').length;
+            const atrasadas = tasks.filter(t => t.status === 'atraso').length;
+            const pendente  = tasks.filter(t => t.status === 'pendente').length;
+            const atrasadasList = tasks.filter(t => t.status === 'atraso').map(t => ({
+                titulo: t.title || '', emp: Array.isArray(t.projects) && t.projects.length ? t.projects[0] : (t.project || ''),
+                resp: (Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : t.owner) || '',
+                prazo: t.deadline ? t.deadline.split('-').reverse().join('/') : '-',
+                hist: (() => { try { const h = JSON.parse(t.notes||'[]').sort((a,b)=>b.date.localeCompare(a.date)); return h.length ? h[0].date.split('-').reverse().join('/').substring(0,5)+': '+h[0].text : ''; } catch(e) { return ''; } })()
+            }));
+            return { byEmp, total, andamento, atrasadas, concluido: 0, pendente, atrasadasList,
+                     sprintStart: 'Completo', sprintEnd: '', dataGeracao: TODAY_ISO.split('-').reverse().join('/') };
+        }
+
+        function buildEmailCompleto(data) {
+            const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
+            const EMP_COLORS = { "BE GARDEN":"#46B276", "BE BONIFACIO":"#FCBF44", "BE DUMONT":"#992C1A", "BE SÃO PAULO":"#7247F6" };
+            const empRows = EMPS.map(emp => {
+                const rows = data.byEmp[emp] || [];
+                if (rows.length === 0) return '';
+                const atrasadas = rows.filter(r => r.status === 'ATRASO').length;
+                const color = EMP_COLORS[emp] || '#646464';
+                const atrasadasStr = atrasadas > 0 ? `<span style="color:#992C1A;font-weight:bold;">${atrasadas} atrasada${atrasadas>1?'s':''}</span>` : `<span style="color:#888;">sem atrasos</span>`;
+                return `<tr style="border-bottom:1px solid #f0f0f0;">
+                  <td style="padding:10px 14px;font-size:13px;"><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};margin-right:8px;vertical-align:middle;"></span><strong>${emp}</strong></td>
+                  <td style="padding:10px 14px;font-size:12px;color:#646464;text-align:right;">${rows.length} atividade${rows.length!==1?'s':''}</td>
+                  <td style="padding:10px 14px;font-size:12px;text-align:right;">${atrasadasStr}</td>
+                </tr>`;
+            }).join('');
+            return `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;color:#111111;">
+  <div style="background:#111111;padding:24px 28px;border-radius:8px 8px 0 0;">
+    <div style="font-size:10px;color:#C8C8C8;letter-spacing:2px;text-transform:uppercase;margin-bottom:6px;">BE A Moradia do Futuro</div>
+    <div style="color:white;font-size:22px;font-weight:bold;">Relatório Completo</div>
+    <div style="color:#646464;font-size:12px;margin-top:4px;">${data.dataGeracao} &nbsp;·&nbsp; Status geral de todas as atividades</div>
+  </div>
+  <div style="height:4px;background:linear-gradient(90deg,#46B276 25%,#FCBF44 25% 50%,#992C1A 50% 75%,#7247F6 75%);"></div>
+  <div style="border:1px solid #e2e8f0;border-top:none;padding:24px 28px;border-radius:0 0 8px 8px;">
+    <p style="margin:0 0 20px;font-size:14px;">Olá, time! Segue o <strong>status completo</strong> de todas as atividades ativas com a última atualização registrada.</p>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
+      <tr>
+        <td style="padding:14px;text-align:center;border-right:1px solid #e2e8f0;"><div style="font-size:24px;font-weight:bold;">${data.total}</div><div style="font-size:10px;color:#888;text-transform:uppercase;margin-top:2px;">Total</div></td>
+        <td style="padding:14px;text-align:center;border-right:1px solid #e2e8f0;background:#f0faf5;"><div style="font-size:24px;font-weight:bold;color:#2D6A4F;">${data.andamento}</div><div style="font-size:10px;color:#2D6A4F;text-transform:uppercase;margin-top:2px;">Andamento</div></td>
+        <td style="padding:14px;text-align:center;border-right:1px solid #e2e8f0;background:#fff5f5;"><div style="font-size:24px;font-weight:bold;color:#992C1A;">${data.atrasadas}</div><div style="font-size:10px;color:#992C1A;text-transform:uppercase;margin-top:2px;">Atrasadas</div></td>
+        <td style="padding:14px;text-align:center;"><div style="font-size:24px;font-weight:bold;color:#888;">${data.pendente}</div><div style="font-size:10px;color:#888;text-transform:uppercase;margin-top:2px;">Pendentes</div></td>
+      </tr>
+    </table>
+    <div style="font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;">Por empreendimento</div>
+    <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">${empRows}</table>
+    <p style="font-size:12px;color:#888;margin:0 0 20px;">O relatório completo em PDF está em anexo.</p>
+    <div style="border-top:1px solid #e2e8f0;padding-top:16px;">
+      <img src="https://pdedbvo.github.io/Processo-De-Desenvolvimento-de-Empreendimento/assinatura.png" alt="DBVO Hub" style="max-width:260px;height:auto;">
+    </div>
+  </div>
+</div>`;
+        }
+
+        function downloadRelatorioCompleto() {
+            const data = buildRelatorioCompletoData();
+            if (data.total === 0) { alert('Nenhuma atividade ativa encontrada.'); return; }
+            const pres = _buildPPTPresentation(data);
+            pres.writeFile({ fileName: `PDE-Relatorio-Completo-${TODAY_ISO.replace(/-/g,'')}.pptx` });
+        }
+
+        async function enviarRelatorioCompletoEmail(btnEl, isAuto = false) {
+            const destinatarios = window.relatorioDestinatarios || [];
+            if (destinatarios.length === 0) { alert('Nenhum destinatário cadastrado.'); return; }
+            const data = buildRelatorioCompletoData();
+            if (data.total === 0) { if (!isAuto) alert('Nenhuma atividade ativa encontrada.'); return; }
+            if (!isAuto) { if (!confirm(`Enviar relatório completo para ${destinatarios.length} destinatário(s)?`)) return; }
+
+            if (btnEl) { btnEl.innerText = '⏳ Gerando PDF...'; btnEl.disabled = true; }
+            const statusEl = document.getElementById('relatorioCompletoStatusMsg');
+            if (statusEl) statusEl.innerText = 'Gerando PDF...';
+
+            let pdfBase64 = '';
+            try {
+                const pdfBuffer = await gerarPDFRelatorio(data);
+                const uint8 = new Uint8Array(pdfBuffer);
+                let binary = ''; uint8.forEach(b => binary += String.fromCharCode(b));
+                pdfBase64 = btoa(binary);
+            } catch(err) { console.error('Erro PDF:', err); }
+
+            if (statusEl) statusEl.innerText = 'Enviando...';
+            if (btnEl) btnEl.innerText = '⏳ Enviando...';
+
+            const corpoEmail = buildEmailCompleto(data);
+            let enviados = 0;
+            for (const email of destinatarios) {
+                try {
+                    await fetch('https://script.google.com/macros/s/AKfycbwiY1WyQOxYsTZh8RGosMdQEwkITsvVNizVIexuTeMZfiMh0YL8wLChSxLr2AaqslNvBw/exec', {
+                        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ to:[email], subject:`[PDE] Relatório Completo — ${data.dataGeracao.replace(/\//g,'.')}`, htmlBody:corpoEmail, pdfBase64:pdfBase64||null, pdfName:`PDE-Relatorio-Completo-${TODAY_ISO}.pdf` }),
+                    });
+                    enviados++;
+                } catch(err) { console.error(err); }
+            }
+            const msg = `✅ Enviado para ${enviados} destinatário(s).`;
+            if (statusEl) statusEl.innerText = msg;
+            if (btnEl) { btnEl.innerText = '✉ ENVIAR EMAIL'; btnEl.disabled = false; }
+            await window.saveEmailLog({ id: Date.now(), key: `completo_${TODAY_ISO}`, taskId:'completo', taskTitle:'Relatório Completo', recipient:destinatarios.join(', '), motivo:'Relatório Completo', tipo: isAuto?'auto':'manual', sentAt:Date.now() });
+        }
+
+        function checkRelatorioCompleto() {
+            if (!window.relatorioCompletoAutoAtivo) return;
+            if (!window.relatorioDestinatarios || window.relatorioDestinatarios.length === 0) return;
+            const today = new Date();
+            if (today.getDay() !== 2) return; // 2 = terça-feira
+            const key = `pde_relatorio_completo_${TODAY_ISO}`;
+            if (localStorage.getItem(key)) return;
+            if (window._relatorioCompletoShown) return;
+            window._relatorioCompletoShown = true;
+            setTimeout(async () => {
+                await enviarRelatorioCompletoEmail(null, true);
+                localStorage.setItem(key, '1');
+            }, 8000);
+        }
+        // ── Fim Relatório Completo ────────────────────────────
+
         function checkRelatorioSemanal() {
             if (!window.relatorioAutoAtivo) return;
             if (!window.relatorioDestinatarios || window.relatorioDestinatarios.length === 0) return;
@@ -4129,9 +4322,9 @@
         }
 
         // ── Gera PDF do relatório para envio por email ──
-        async function gerarPDFRelatorio() {
+        async function gerarPDFRelatorio(dataParam) {
             const { jsPDF } = window.jspdf;
-            const data = buildRelatorioData();
+            const data = dataParam || buildRelatorioData();
             const doc  = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
             const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
             const EMP_COLORS = { "BE GARDEN":[70,178,118], "BE BONIFACIO":[252,191,68], "BE DUMONT":[153,44,26], "BE SÃO PAULO":[114,71,246] };
@@ -4339,7 +4532,7 @@
 
   <!-- Corpo -->
   <div style="border:1px solid #e2e8f0;border-top:none;padding:24px 28px;border-radius:0 0 8px 8px;">
-    <p style="margin:0 0 20px;font-size:14px;color:#111111;">Bom dia, time! Segue o resumo do PDE para a reunião de hoje.</p>
+    <p style="margin:0 0 20px;font-size:14px;color:#111111;">Bom dia, time! Segue o resumo das <strong>atualizações da última semana</strong> (Sprint ${data.sprintStart}–${data.sprintEnd}) para a reunião de hoje.</p>
 
     <!-- KPIs em linha -->
     <table style="width:100%;border-collapse:collapse;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;margin-bottom:20px;">
