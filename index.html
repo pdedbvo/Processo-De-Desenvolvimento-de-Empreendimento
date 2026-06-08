@@ -728,6 +728,23 @@
                         </div>
                     </div>
 
+                    <!-- Filtro Atualizações -->
+                    <div class="flex flex-col">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Atualizações</label>
+                        <div class="relative">
+                            <button id="btnAtualFilter" onclick="toggleDropdown('atualFilterDropdown')"
+                                class="flex items-center gap-2 text-xs px-3 py-2 border rounded-md bg-white min-w-[170px] font-bold text-slate-700 hover:bg-slate-50 outline-none">
+                                <span id="labelAtualFilter">Todos</span>
+                                <span class="ml-auto text-slate-400 text-[10px]">▾</span>
+                            </button>
+                            <div id="atualFilterDropdown" class="filter-dropdown hidden" style="top:100%;left:0;">
+                                <label><input type="radio" name="atualFilter" value="all" checked onchange="onAtualFilterChange(this)"> Todos</label>
+                                <label><input type="radio" name="atualFilter" value="houve" onchange="onAtualFilterChange(this)"> ✅ Houve atualização</label>
+                                <label><input type="radio" name="atualFilter" value="nao" onchange="onAtualFilterChange(this)"> ⚠️ Não houve atualização</label>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Sprint -->
                     <div class="flex gap-2 p-2 bg-slate-50 rounded-lg border border-slate-200">
                         <div class="flex flex-col">
@@ -766,16 +783,17 @@
                     <table id="taskTable" class="w-full text-left border-collapse" style="table-layout:fixed;">
                         <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 tracking-widest" style="font-family:'N27',sans-serif;font-weight:300;letter-spacing:0.1em;">
                             <tr>
-                                <th class="py-4 px-2" style="width:28px;"></th>
-                                <th class="py-4 px-4 sortable-th" style="width:140px;" onclick="setSortColumn('project')">Empreendimento<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 sortable-th" style="width:340px;" onclick="setSortColumn('title')">Atividade & Histórico<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 sortable-th" style="width:130px;" onclick="setSortColumn('owner')">Responsável<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 text-rose-500" style="width:170px;">Problemas<div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 text-slate-600" style="width:170px;">Próximos Passos<div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 sortable-th" style="width:100px;" onclick="setSortColumn('deadline')">Prazo Atual<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 text-neutral-600" style="width:130px;">Expectativas Ant.<div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 sortable-th" style="width:90px;" onclick="setSortColumn('status')">Status<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-4 px-4 text-right" style="width:150px;">Ação</th>
+                                <th class="py-3 px-2" style="width:24px;"></th>
+                                <th class="py-3 px-3 sortable-th" style="width:120px;" onclick="setSortColumn('project')">Empreendimento<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:300px;" onclick="setSortColumn('title')">Atividade & Histórico<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:110px;" onclick="setSortColumn('owner')">Responsável<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 text-rose-500" style="width:140px;">Problemas<div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 text-slate-600" style="width:140px;">Próximos Passos<div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:90px;" onclick="setSortColumn('deadline')">Prazo Atual<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 text-neutral-600" style="width:110px;">Expect. Ant.<div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:90px;" onclick="setSortColumn('status')">Status<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:150px;" onclick="setSortColumn('atualizacao')">Atualizações<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 text-right" style="width:120px;">Ação</th>
                             </tr>
                         </thead>
                         <tbody id="taskTableBody" class="text-sm divide-y divide-slate-100 bg-white"></tbody>
@@ -1474,6 +1492,9 @@
                 } else if (col === 'owner') {
                     va = (Array.isArray(a.owners) && a.owners.length ? a.owners[0] : a.owner) || '';
                     vb = (Array.isArray(b.owners) && b.owners.length ? b.owners[0] : b.owner) || '';
+                } else if (col === 'atualizacao') {
+                    va = a.atualizacao || 'houve';
+                    vb = b.atualizacao || 'houve';
                 } else {
                     va = (a[col] || '').toString().toLowerCase();
                     vb = (b[col] || '').toString().toLowerCase();
@@ -1491,9 +1512,10 @@
         window.activeProjFilters = new Set(['all']);
         window.activeStatFilters = new Set(['all']);
         window.activeOwnerFilters = new Set(['all']);
+        window.activeAtualFilter = 'all';
 
         function toggleDropdown(id) {
-            ['projFilterDropdown','statFilterDropdown','ownerFilterDropdown'].forEach(d => {
+            ['projFilterDropdown','statFilterDropdown','ownerFilterDropdown','atualFilterDropdown'].forEach(d => {
                 if (d !== id) document.getElementById(d)?.classList.add('hidden');
             });
             document.getElementById(id)?.classList.toggle('hidden');
@@ -1553,6 +1575,14 @@
             const label = window.activeOwnerFilters.has('all') ? 'Todos'
                 : [...window.activeOwnerFilters].join(', ').substring(0,22) + ([...window.activeOwnerFilters].join(', ').length > 22 ? '…' : '');
             document.getElementById('labelOwnerFilter').innerText = label;
+            renderTasks();
+        }
+
+        function onAtualFilterChange(radio) {
+            window.activeAtualFilter = radio.value;
+            const labels = { all: 'Todos', houve: '✅ Houve atualização', nao: '⚠️ Não houve' };
+            document.getElementById('labelAtualFilter').innerText = labels[radio.value] || 'Todos';
+            document.getElementById('atualFilterDropdown').classList.add('hidden');
             renderTasks();
         }
 
@@ -1818,13 +1848,15 @@
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
                 const mO = ownerF.has('all') || taskOwners.some(o => ownerF.has(o));
+                const atualF = window.activeAtualFilter || 'all';
+                const mA = atualF === 'all' || (t.atualizacao || 'houve') === atualF;
                 const mSearch = !search
                     || (t.title||'').toLowerCase().includes(search)
                     || (t.owner||'').toLowerCase().includes(search)
                     || taskProjArr.join(' ').toLowerCase().includes(search)
                     || (t.sector||'').toLowerCase().includes(search)
                     || (Array.isArray(t.owners) ? t.owners.join(' ') : '').toLowerCase().includes(search);
-                return mP && mS && mO && mSearch;
+                return mP && mS && mO && mA && mSearch;
             });
 
             const ordered = window.sortColumn
@@ -1861,25 +1893,31 @@
                     <td class="py-3 px-2 align-top text-center">
                         <span class="drag-handle" title="Arrastar para reordenar">⠿</span>
                     </td>
-                    <td class="py-4 px-4 align-top uppercase" style="overflow:hidden;">
+                    <td class="py-3 px-3 align-top uppercase" style="overflow:hidden;">
                         ${projectCellHtml}
                         <div class="sector-badge text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-sm inline-block mt-1">${sectorHl}</div>
                     </td>
-                    <td class="py-4 px-4 align-top" style="overflow:hidden;">
+                    <td class="py-3 px-3 align-top" style="overflow:hidden;">
                         <div class="font-bold text-slate-800 leading-tight">${titleHl}${atrasoTag}${criticalBadge}${urgenteBadge}</div>
                         ${t.updatedBy && t.updatedAt ? `<div class="text-[9px] text-slate-300 mt-0.5">✎ ${t.updatedBy} · ${new Date(t.updatedAt).toLocaleDateString('pt-BR')}</div>` : ''}
                         ${renderHistoryInTable(t.notes, t.id, t.title, Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner || ''), t.deadline || '')}
                     </td>
-                    <td class="py-4 px-4 align-top font-semibold text-slate-600" style="overflow:hidden;">${ownersHl}</td>
-                    <td class="py-4 px-4 align-top text-rose-600 text-[10px] italic" style="overflow:hidden;">${t.problems || '-'}</td>
-                    <td class="py-4 px-4 align-top text-slate-700 text-[10px] font-medium" style="overflow:hidden;">${t.nextSteps || '-'}</td>
-                    <td class="py-4 px-4 align-top font-bold text-slate-900" style="overflow:hidden;">${t.deadline ? t.deadline.split('-').reverse().join('/') : '-'}</td>
-                    <td class="py-4 px-4 align-top text-neutral-600 text-[10px] font-mono" style="overflow:hidden;">${t.oldExpectations || '-'}</td>
-                    <td class="py-4 px-4 align-top" style="overflow:hidden;">
+                    <td class="py-3 px-3 align-top font-semibold text-slate-600" style="overflow:hidden;">${ownersHl}</td>
+                    <td class="py-3 px-3 align-top text-rose-600 text-[10px] italic" style="overflow:hidden;">${t.problems || '-'}</td>
+                    <td class="py-3 px-3 align-top text-slate-700 text-[10px] font-medium" style="overflow:hidden;">${t.nextSteps || '-'}</td>
+                    <td class="py-3 px-3 align-top font-bold text-slate-900" style="overflow:hidden;">${t.deadline ? t.deadline.split('-').reverse().join('/') : '-'}</td>
+                    <td class="py-3 px-3 align-top text-neutral-600 text-[10px] font-mono" style="overflow:hidden;">${t.oldExpectations || '-'}</td>
+                    <td class="py-3 px-3 align-top" style="overflow:hidden;">
                         <span class="status-badge status-${t.status}">${t.status}</span>
                         ${t.progress > 0 ? `<div style="margin-top:5px;height:3px;background:#e8e8e8;border-radius:2px;overflow:hidden;"><div style="height:100%;width:${t.progress}%;background:${t.progress>=100?'#22c55e':t.status==='atraso'?'#dc2626':'#646464'};border-radius:2px;transition:width 0.3s;"></div></div><span style="font-size:8px;color:#94a3b8;font-weight:700;">${t.progress}%</span>` : ''}
                     </td>
-                    <td class="py-4 px-4 align-top text-right">
+                    <td class="py-3 px-3 align-top" style="overflow:hidden;">
+                        <select onchange="saveAtualizacao('${t.id}', this.value)" style="font-size:10px;font-weight:700;font-family:'N27',sans-serif;border-radius:6px;padding:4px 8px;border:none;outline:none;cursor:pointer;width:100%;${(t.atualizacao||'houve')==='houve'?'background:#dcfce7;color:#166534;':'background:#fef9c3;color:#854d0e;'}">
+                            <option value="houve" ${(t.atualizacao||'houve')==='houve'?'selected':''}>✅ Houve atualização</option>
+                            <option value="nao" ${t.atualizacao==='nao'?'selected':''}>⚠️ Não houve atualização</option>
+                        </select>
+                    </td>
+                    <td class="py-3 px-3 align-top text-right">
                         <div class="flex gap-2 justify-end opacity-0 group-hover:opacity-100 transition-all">
                             <button onclick="sendTaskEmail('${t.id}', this)"
                                 title="Enviar e-mail"
@@ -1895,6 +1933,19 @@
             initDragDrop();
             renderCustomTables();
             saveFiltersToStorage();
+        }
+
+        async function saveAtualizacao(id, value) {
+            const t = window.tasks.find(x => String(x.id) === String(id));
+            if (!t) return;
+            t.atualizacao = value;
+            // Update select color inline
+            const sel = document.querySelector(`tr[data-task-id="${id}"] select`);
+            if (sel) {
+                sel.style.background = value === 'houve' ? '#dcfce7' : '#fef9c3';
+                sel.style.color      = value === 'houve' ? '#166534' : '#854d0e';
+            }
+            await window.saveToFirebase(t);
         }
 
         function editTask(id) {
@@ -3413,6 +3464,7 @@
                 proj:  [...(window.activeProjFilters  || new Set(['all']))],
                 stat:  [...(window.activeStatFilters  || new Set(['all']))],
                 owner: [...(window.activeOwnerFilters || new Set(['all']))],
+                atual: window.activeAtualFilter || 'all',
                 sprintS: document.getElementById('filterSprintStart')?.value || '',
                 sprintE: document.getElementById('filterSprintEnd')?.value   || '',
                 search:  document.getElementById('searchTerm')?.value        || '',
@@ -3428,6 +3480,7 @@
                 if (state.proj)  window.activeProjFilters  = new Set(state.proj);
                 if (state.stat)  window.activeStatFilters  = new Set(state.stat);
                 if (state.owner) window.activeOwnerFilters = new Set(state.owner);
+                if (state.atual) window.activeAtualFilter  = state.atual;
 
                 // Restore UI labels
                 const pf = window.activeProjFilters;
@@ -3436,15 +3489,22 @@
                 const lp = document.getElementById('labelProjFilter');
                 const ls = document.getElementById('labelStatFilter');
                 const lo = document.getElementById('labelOwnerFilter');
+                const la = document.getElementById('labelAtualFilter');
                 if (lp) lp.innerText = pf.has('all') ? 'Todos' : [...pf].join(', ').substring(0,22);
                 if (ls) ls.innerText = sf.has('all') ? 'Todos' : [...sf].map(s => s.charAt(0).toUpperCase()+s.slice(1)).join(', ');
                 if (lo) lo.innerText = of.has('all') ? 'Todos' : [...of].join(', ').substring(0,22);
+                const atualLabels = { all: 'Todos', houve: '✅ Houve atualização', nao: '⚠️ Não houve' };
+                if (la) la.innerText = atualLabels[state.atual] || 'Todos';
 
                 // Restore checkboxes after a tick (DOM needs to be ready)
                 setTimeout(() => {
                     document.querySelectorAll('.proj-cb').forEach(c => c.checked = pf.has(c.value));
                     document.querySelectorAll('.stat-cb').forEach(c => c.checked = sf.has(c.value));
                     document.querySelectorAll('.owner-cb').forEach(c => c.checked = of.has(c.value));
+                    if (state.atual) {
+                        const r = document.querySelector(`input[name="atualFilter"][value="${state.atual}"]`);
+                        if (r) r.checked = true;
+                    }
                     if (state.sprintS) document.getElementById('filterSprintStart').value = state.sprintS;
                     if (state.sprintE) document.getElementById('filterSprintEnd').value   = state.sprintE;
                     if (state.search)  document.getElementById('searchTerm').value        = state.search;
