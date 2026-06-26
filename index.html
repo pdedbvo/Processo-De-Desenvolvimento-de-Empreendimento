@@ -35,7 +35,10 @@
             font-weight: 700;
             font-style: normal;
         }
-        body { font-family: 'N27', sans-serif; background-color: #f5f5f5; transition: background-color 0.2s, color 0.2s; font-weight: 400; letter-spacing: 0.01em; }
+        body { font-family: 'N27', sans-serif; background-color: #f5f5f5; transition: background-color 0.2s, color 0.2s; font-weight: 400; letter-spacing: 0.01em;
+            background-image: linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
 
         /* ── DARK MODE ── */
         body.dark { background-color: #0f172a; color: #e2e8f0; }
@@ -57,7 +60,11 @@
         /* ══════════════════════════════════════════
            DARK MODE — limpo e sem conflitos
         ══════════════════════════════════════════ */
-        body.dark { background-color: #0d0d0d; color: #e2e8f0; }
+        body.dark { background-color: #111;
+            background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+            color: #e2e8f0;
+        }
 
         /* Cards e superfícies */
         body.dark .card { background: #1a1a1a !important; border-color: #2a2a2a !important; }
@@ -435,7 +442,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getFirestore, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { getFirestore, getDoc, collection, onSnapshot, doc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBshYvEFAzYwQPI8R2JTx02B-30Lpriilc",
@@ -448,6 +455,7 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        window._db = db; window._getDoc = getDoc; window._doc = doc;
         const tasksCol = collection(db, "tasks");
         const usersCol = collection(db, "users");
         const emailLogsCol = collection(db, "emailLogs");
@@ -520,8 +528,9 @@
                 // Chama renderHubDashboard com pequeno delay para garantir que o script principal carregou
                 if (typeof renderHubDashboard === 'function') {
                     renderHubDashboard();
+                    setTimeout(() => { if(typeof renderHubOkr==='function') renderHubOkr(); }, 150);
                 } else {
-                    setTimeout(() => { if (typeof renderHubDashboard === 'function') renderHubDashboard(); }, 300);
+                    setTimeout(() => { if (typeof renderHubDashboard === 'function') { renderHubDashboard(); setTimeout(() => { if(typeof renderHubOkr==='function') renderHubOkr(); }, 100); } }, 300);
                 }
             } else {
                 // PDE já ativo (ex: usuário voltou ao HUB e entrou de novo)
@@ -757,6 +766,35 @@
 
                 <!-- Barras por PDE -->
                 <div id="hub-pde-bars" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
+            </div>
+
+            <!-- OKR CONSOLIDADO -->
+            <div style="border-top:1px solid var(--hub-divider);padding-top:40px;margin-top:8px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <h3 style="font-family:'N27',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--hub-text-label);">📊 OKR — Conclusões com Atraso por Mês</h3>
+                        <p style="font-size:9px;color:var(--hub-text-muted);margin-top:4px;">Das atividades concluídas em cada mês, qual % foi concluída com atraso.</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <select id="hub-okr-pde-filter" onchange="renderHubOkr()" style="background:var(--hub-card-bg);border:1px solid var(--hub-btn-border);color:var(--hub-text-label);font-size:10px;font-weight:700;border-radius:6px;padding:5px 10px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                            <option value="all">Todos os PDEs</option>
+                            <option value="prelancamento">Pré-lançamento</option>
+                            <option value="desenvolvimento">Desenvolvimento</option>
+                            <option value="entrega">Entrega e Implantação</option>
+                        </select>
+                        <select id="hub-okr-range" onchange="renderHubOkr()" style="background:var(--hub-card-bg);border:1px solid var(--hub-btn-border);color:var(--hub-text-label);font-size:10px;font-weight:700;border-radius:6px;padding:5px 10px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                            <option value="6">Últimos 6 meses</option>
+                            <option value="12" selected>Últimos 12 meses</option>
+                            <option value="24">Últimos 24 meses</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="background:var(--hub-card-bg);border:1px solid var(--hub-card-border);border-radius:16px;padding:24px;">
+                    <div style="position:relative;height:220px;">
+                        <canvas id="hub-okr-chart"></canvas>
+                    </div>
+                    <div id="hub-okr-resumo" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:20px;"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -1350,35 +1388,43 @@
     <!-- ═══════════════════════════════════════════════════════ -->
 
     <!-- ══ GANTT FULL TAB — posição fixa, fora do <main> ══ -->
+    <!-- ══ GANTT ABA ══ -->
     <div id="tab-content-gantt-full" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;flex-direction:column;z-index:41;background:#fff;">
-        <!-- Toolbar do Gantt full -->
-        <div style="background:#fff;border-bottom:1px solid #e2e8f0;padding:10px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;flex-shrink:0;">
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.1em;">Empreendimento</span>
-            <select id="ganttFullProjFilter" onchange="renderFullGantt()" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;outline:none;background:#f8fafc;color:#1e293b;">
-                <option value="all">Todos</option>
-            </select>
+        <div style="background:#f8fafc;border-bottom:2px solid #e2e8f0;padding:8px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex-shrink:0;">
+            <select id="gProjSel" onchange="gOnProj()" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;outline:none;background:#fff;color:#1e293b;min-width:180px;"><option value="">Selecione o empreendimento...</option></select>
             <div style="width:1px;height:20px;background:#e2e8f0;"></div>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.1em;">Responsável</span>
-            <select id="ganttFullOwnerFilter" onchange="renderFullGantt()" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;outline:none;background:#f8fafc;color:#1e293b;">
-                <option value="all">Todos</option>
-            </select>
-            <div style="width:1px;height:20px;background:#e2e8f0;"></div>
-            <span style="font-size:9px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:0.1em;">Período</span>
-            <select id="ganttFullRange" onchange="renderFullGantt()" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:5px 10px;outline:none;background:#f8fafc;color:#1e293b;">
-                <option value="3">3 meses</option>
-                <option value="6" selected>6 meses</option>
-                <option value="12">12 meses</option>
-            </select>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:12px;font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;">
-                <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#f59e0b;display:inline-block;"></span>Andamento</span>
-                <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#10b981;display:inline-block;"></span>Concluído</span>
-                <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#ef4444;display:inline-block;"></span>Atraso</span>
-                <span style="display:flex;align-items:center;gap:4px;"><span style="width:12px;height:12px;border-radius:3px;background:#94a3b8;display:inline-block;"></span>Pendente</span>
+            <div style="display:flex;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;background:#fff;">
+                <button id="gbtn-day"     onclick="gSetScale('day')"     style="padding:5px 12px;font-size:10px;font-weight:700;border:none;background:#fff;color:#64748b;cursor:pointer;">Dia</button>
+                <button id="gbtn-week"    onclick="gSetScale('week')"    style="padding:5px 12px;font-size:10px;font-weight:700;border:none;background:#111;color:#fff;cursor:pointer;">Semana</button>
+                <button id="gbtn-month"   onclick="gSetScale('month')"   style="padding:5px 12px;font-size:10px;font-weight:700;border:none;background:#fff;color:#64748b;cursor:pointer;">Mês</button>
+                <button id="gbtn-quarter" onclick="gSetScale('quarter')" style="padding:5px 12px;font-size:10px;font-weight:700;border:none;background:#fff;color:#64748b;cursor:pointer;">Trimestre</button>
+                <button id="gbtn-year"    onclick="gSetScale('year')"    style="padding:5px 12px;font-size:10px;font-weight:700;border:none;background:#fff;color:#64748b;cursor:pointer;">Ano</button>
             </div>
-            <button onclick="exportFullGanttPNG()" style="display:flex;align-items:center;gap:5px;background:#334155;color:white;border:none;border-radius:8px;padding:6px 14px;font-size:10px;font-weight:700;cursor:pointer;" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='#334155'">📷 PNG</button>
+            <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:700;color:#475569;">
+                <input type="checkbox" id="gOnlyLinked" onchange="gDraw()" checked style="accent-color:#6366f1;">
+                Só com dependência
+            </label>
+            <div style="margin-left:auto;display:flex;gap:12px;font-size:10px;font-weight:700;color:#64748b;">
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#6366f1;display:inline-block;"></span>Atividade</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#dc2626;display:inline-block;"></span>Caminho crítico</span>
+                <span style="display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#10b981;display:inline-block;"></span>Concluída</span>
+            </div>
+            <button onclick="gExportPNG()" style="background:#334155;color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:10px;font-weight:700;cursor:pointer;">📷 PNG</button>
         </div>
-        <div style="flex:1;overflow:auto;padding:0;">
-            <div id="ganttFullInner" style="min-width:900px;"></div>
+        <div id="gBody" style="flex:1;display:flex;overflow:hidden;min-height:0;">
+            <div id="gNames" style="width:230px;flex-shrink:0;border-right:2px solid #e2e8f0;display:flex;flex-direction:column;overflow:hidden;background:#fff;">
+                <div style="height:50px;border-bottom:2px solid #e2e8f0;padding:0 12px;display:flex;align-items:flex-end;padding-bottom:8px;background:#f8fafc;flex-shrink:0;">
+                    <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#94a3b8;letter-spacing:.06em;">Atividade</span>
+                </div>
+                <div id="gNameRows" style="flex:1;overflow-y:auto;"></div>
+            </div>
+            <div id="gScroll" style="flex:1;overflow:auto;" onscroll="gSyncScroll(this)">
+                <div id="gInner" style="position:relative;min-width:800px;">
+                    <div id="gHeader" style="position:sticky;top:0;z-index:10;background:#f8fafc;border-bottom:2px solid #e2e8f0;"></div>
+                    <div id="gBars" style="position:relative;"></div>
+                    <svg id="gSVG" style="position:absolute;top:50px;left:0;pointer-events:none;overflow:visible;"></svg>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -2163,7 +2209,7 @@
                         const top = header ? header.getBoundingClientRect().bottom : 0;
                         ganttEl.style.top = top + 'px';
                         if (banner) banner.style.setProperty('display', 'none', 'important');
-                        renderFullGantt();
+                        if (typeof gInitTab === 'function') gInitTab();
                     });
                 }
             } else {
@@ -2211,7 +2257,7 @@
                 hubEl.style.display = 'block';
                 // Atualiza logo do HUB (preta/branca conforme tema)
                 updateHubLogo();
-                if (typeof renderHubDashboard === 'function') renderHubDashboard();
+                if (typeof renderHubDashboard === 'function') { renderHubDashboard(); setTimeout(() => { if(typeof renderHubOkr==='function') renderHubOkr(); }, 100); }
             }
         }
 
@@ -2344,20 +2390,50 @@
                     return false;
                 }).length;
                 const pct = ptotal > 0 ? Math.round((pconcl/ptotal)*100) : 0;
+                const pandamento = ptasks.filter(t => t.status === 'andamento').length;
+                const ppendente  = ptasks.filter(t => t.status === 'pendente').length;
+                const pctAndamento = ptotal > 0 ? (pandamento/ptotal)*100 : 0;
+                const pctAtraso    = ptotal > 0 ? (patraso/ptotal)*100 : 0;
+                const pctPendente  = ptotal > 0 ? (ppendente/ptotal)*100 : 0;
                 barsEl.innerHTML += `
                     <div style="background:var(--hub-metric-bg);border:1px solid var(--hub-metric-border);border-radius:12px;padding:20px;">
                         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                             <span style="font-size:10px;font-weight:700;color:${p.color};font-family:'N27',sans-serif;text-transform:uppercase;letter-spacing:0.08em;">${p.label}</span>
                             <span style="font-size:18px;font-weight:900;color:var(--hub-metric-text);font-family:'N27',sans-serif;">${ptotal} atv.</span>
                         </div>
-                        <div style="background:var(--hub-bar-bg);border-radius:4px;height:6px;overflow:hidden;margin-bottom:10px;">
-                            <div style="height:100%;width:${pct}%;background:${p.color};border-radius:4px;transition:width 0.5s;"></div>
+                        <!-- Barra concluídas -->
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                            <div style="width:10px;height:10px;border-radius:2px;background:#10b981;flex-shrink:0;"></div>
+                            <div style="flex:1;background:var(--hub-bar-bg);border-radius:4px;height:6px;overflow:hidden;">
+                                <div style="height:100%;width:${pct}%;background:#10b981;border-radius:4px;transition:width 0.5s;"></div>
+                            </div>
+                            <span style="font-size:9px;font-weight:700;color:#10b981;min-width:28px;text-align:right;">${pconcl}</span>
                         </div>
-                        <div style="display:flex;gap:12px;font-size:9px;font-weight:700;color:var(--hub-text-muted);">
-                            <span style="color:#10b981;">${pconcl} concluídas</span>
-                            ${patraso > 0 ? `<span style="color:#ef4444;">${patraso} atrasadas</span>` : ''}
-                            <span>${pct}% completo</span>
+                        <!-- Barra andamento -->
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                            <div style="width:10px;height:10px;border-radius:2px;background:#f59e0b;flex-shrink:0;"></div>
+                            <div style="flex:1;background:var(--hub-bar-bg);border-radius:4px;height:6px;overflow:hidden;">
+                                <div style="height:100%;width:${pctAndamento}%;background:#f59e0b;border-radius:4px;transition:width 0.5s;"></div>
+                            </div>
+                            <span style="font-size:9px;font-weight:700;color:#f59e0b;min-width:28px;text-align:right;">${pandamento}</span>
                         </div>
+                        <!-- Barra atrasadas -->
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:5px;">
+                            <div style="width:10px;height:10px;border-radius:2px;background:#ef4444;flex-shrink:0;"></div>
+                            <div style="flex:1;background:var(--hub-bar-bg);border-radius:4px;height:6px;overflow:hidden;">
+                                <div style="height:100%;width:${pctAtraso}%;background:#ef4444;border-radius:4px;transition:width 0.5s;"></div>
+                            </div>
+                            <span style="font-size:9px;font-weight:700;color:#ef4444;min-width:28px;text-align:right;">${patraso}</span>
+                        </div>
+                        <!-- Barra pendentes -->
+                        <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+                            <div style="width:10px;height:10px;border-radius:2px;background:#94a3b8;flex-shrink:0;"></div>
+                            <div style="flex:1;background:var(--hub-bar-bg);border-radius:4px;height:6px;overflow:hidden;">
+                                <div style="height:100%;width:${pctPendente}%;background:#94a3b8;border-radius:4px;transition:width 0.5s;"></div>
+                            </div>
+                            <span style="font-size:9px;font-weight:700;color:#94a3b8;min-width:28px;text-align:right;">${ppendente}</span>
+                        </div>
+                        <div style="font-size:9px;font-weight:700;color:var(--hub-text-muted);">${pct}% concluído</div>
                     </div>`;
             });
 
@@ -2374,122 +2450,314 @@
         // ══════════════════════════════════════════════════════
 
         // ══════════════════════════════════════════════════════
-        // GANTT FULL (aba própria) — reusa lógica do gantt leve
+
         // ══════════════════════════════════════════════════════
-        function renderFullGantt() {
-            const container = document.getElementById('ganttFullInner');
-            if (!container) return;
+        // GANTT — setas, caminho crítico, multi-escala, canvas-linked
+        // ══════════════════════════════════════════════════════
+        window._gScale = 'week';
+        window._gLinks = [];
+        window._gProj  = '';
 
-            const activePDE_full = window._activePDE || 'desenvolvimento';
-            const projFilter  = (document.getElementById('ganttFullProjFilter')  || {}).value || 'all';
-            const ownerFilter = (document.getElementById('ganttFullOwnerFilter') || {}).value || 'all';
-            const rangeMonths = parseInt((document.getElementById('ganttFullRange') || {}).value || '6');
+        function gSetScale(s) {
+            window._gScale = s;
+            ['day','week','month','quarter','year'].forEach(v => {
+                const b = document.getElementById('gbtn-' + v);
+                if (!b) return;
+                b.style.background = v === s ? '#111' : '#fff';
+                b.style.color      = v === s ? '#fff' : '#64748b';
+            });
+            gDraw();
+        }
 
-            // Popula filtros
-            const projSel = document.getElementById('ganttFullProjFilter');
-            if (projSel) {
-                const projs = [...new Set((window.tasks||[]).filter(t=>(t.pde||'desenvolvimento')===activePDE_full).map(t=>t.project).filter(Boolean))].sort();
-                const cur = projSel.value;
-                projSel.innerHTML = '<option value="all">Todos</option>' + projs.map(p=>`<option value="${p}" ${p===cur?'selected':''}>${p}</option>`).join('');
-            }
-            const ownerSel = document.getElementById('ganttFullOwnerFilter');
-            if (ownerSel) {
-                const os = new Set();
-                (window.tasks||[]).filter(t=>(t.pde||'desenvolvimento')===activePDE_full).forEach(t => {
-                    if (Array.isArray(t.owners)) t.owners.forEach(o => o && os.add(o));
-                    else if (t.owner) os.add(t.owner);
-                });
-                const cur = ownerSel.value;
-                ownerSel.innerHTML = '<option value="all">Todos</option>' + [...os].sort().map(o=>`<option value="${o}" ${o===cur?'selected':''}>${o}</option>`).join('');
-            }
+        function gSyncScroll(el) {
+            const hdr = document.getElementById('gHeader');
+            if (hdr) hdr.scrollLeft = el.scrollLeft;
+            const nr = document.getElementById('gNameRows');
+            if (nr) nr.scrollTop = el.scrollTop;
+        }
 
-            const hoje = new Date(TODAY_ISO + 'T00:00:00');
-            const rangeStart = new Date(hoje); rangeStart.setMonth(rangeStart.getMonth()-1);
-            const rangeEnd = new Date(rangeStart); rangeEnd.setMonth(rangeEnd.getMonth()+rangeMonths+1);
-            const totalDays = Math.round((rangeEnd-rangeStart)/(1000*60*60*24));
-            const LABEL_W = 220;
+        function gOnProj() {
+            const sel  = document.getElementById('gProjSel');
+            const proj = sel ? sel.value : '';
+            window._gProj = proj;
+            if (!proj) { gDraw(); return; }
 
-            const tasks = (window.tasks||[]).filter(t => {
-                if ((t.pde||'desenvolvimento') !== activePDE_full) return false;
-                if (projFilter !== 'all' && t.project !== projFilter) return false;
-                if (ownerFilter !== 'all') {
-                    const tO = Array.isArray(t.owners)&&t.owners.length ? t.owners : (t.owner?[t.owner]:[]);
-                    if (!tO.includes(ownerFilter)) return false;
-                }
-                return t.start || t.deadline;
-            }).sort((a,b)=>(a.start||a.deadline||'9999').localeCompare(b.start||b.deadline||'9999'));
-
-            if (tasks.length === 0) {
-                container.innerHTML = '<div style="padding:48px;text-align:center;color:#94a3b8;font-size:12px;">Nenhuma atividade com datas para exibir.</div>';
+            // Use CV if same project already loaded in Canvas tab
+            if (typeof CV !== 'undefined' && CV.proj === proj && Array.isArray(CV.links)) {
+                window._gLinks = CV.links;
+                window._gNodes = CV.nodes || {};
+                gDraw();
                 return;
             }
 
-            // Monta cabeçalho de meses
-            const months = [];
-            let cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), 1);
-            while (cur <= rangeEnd) {
-                months.push(new Date(cur));
-                cur.setMonth(cur.getMonth()+1);
+            const getDoc = window._getDoc;
+            const docFn  = window._doc;
+            const db     = window._db;
+            if (!getDoc || !docFn || !db) { window._gLinks = []; gDraw(); return; }
+
+            const pde    = window._activePDE || 'desenvolvimento';
+            const newKey = (pde + '_' + proj).replace(/\//g, '_');
+            const oldKey = proj.replace(/\//g, '_');
+
+            const tryKey = k => getDoc(docFn(db, 'canvasLayouts', k))
+                .then(s => s && s.exists() ? s.data() : null).catch(() => null);
+
+            tryKey(newKey).then(data => {
+                if (data && data.links && data.links.length > 0) {
+                    window._gLinks = data.links;
+                    window._gNodes = data.nodes || {};
+                    gDraw();
+                } else {
+                    tryKey(oldKey).then(data2 => {
+                        const d = data2 || data;
+                        window._gLinks = d ? (d.links || []) : [];
+                        window._gNodes = d ? (d.nodes || {}) : {};
+                        gDraw();
+                    });
+                }
+            });
+        }
+
+        function gInitTab() {
+            const pde = window._activePDE || 'desenvolvimento';
+            const sel = document.getElementById('gProjSel');
+            if (!sel) return;
+            const projs = [...new Set((window.tasks || [])
+                .filter(t => (t.pde || 'desenvolvimento') === pde)
+                .flatMap(t => Array.isArray(t.projects) && t.projects.length
+                    ? t.projects : (t.project ? [t.project] : []))
+            )].sort();
+            const prev = window._gProj || '';
+            sel.innerHTML = '<option value="">Selecione o empreendimento...</option>' +
+                projs.map(p => `<option value="${p}" ${p === prev ? 'selected' : ''}>${p}</option>`).join('');
+            if (prev && projs.includes(prev)) { sel.value = prev; gOnProj(); }
+            else gDraw();
+        }
+
+        function gCritical(tasks, links) {
+            const EF = {};
+            tasks.forEach(t => { EF[String(t.id)] = t.linkedDeadline || t.deadline || t.start || TODAY_ISO; });
+            tasks.forEach(t => {
+                links.filter(l => String(l.to) === String(t.id)).forEach(l => {
+                    const f = EF[String(l.from)];
+                    if (f && f > EF[String(t.id)]) EF[String(t.id)] = f;
+                });
+            });
+            const maxEF = Object.values(EF).reduce((a, b) => b > a ? b : a, '');
+            const crit  = new Set();
+            function trace(id) {
+                if (crit.has(id)) return; crit.add(id);
+                links.filter(l => String(l.to) === id).forEach(l => {
+                    if (EF[String(l.from)] === EF[id]) trace(String(l.from));
+                });
+            }
+            tasks.filter(t => EF[String(t.id)] === maxEF).forEach(t => trace(String(t.id)));
+            return crit;
+        }
+
+        function gDraw() {
+            const proj       = window._gProj || '';
+            const links      = window._gLinks || [];
+            const scale      = window._gScale || 'week';
+            const onlyLinked = document.getElementById('gOnlyLinked')?.checked ?? true;
+            const pde        = window._activePDE || 'desenvolvimento';
+
+            const barsEl = document.getElementById('gBars');
+            const hdrEl  = document.getElementById('gHeader');
+            const svgEl  = document.getElementById('gSVG');
+            const nameEl = document.getElementById('gNameRows');
+            const inner  = document.getElementById('gInner');
+            if (!barsEl) return;
+
+            const empty = msg => {
+                barsEl.innerHTML = `<div style="padding:60px;text-align:center;color:#94a3b8;font-size:12px;font-weight:700;">${msg}</div>`;
+                if (hdrEl) hdrEl.innerHTML = '';
+                if (svgEl) svgEl.innerHTML = '';
+                if (nameEl) nameEl.innerHTML = '';
+            };
+
+            if (!proj) { empty('Selecione um empreendimento acima.'); return; }
+
+            // KEY FIX: if onlyLinked and no links loaded → show empty immediately
+            const linkedIds = new Set([
+                ...links.map(l => String(l.from)),
+                ...links.map(l => String(l.to))
+            ]);
+            if (onlyLinked && links.length === 0) {
+                empty('Nenhuma dependência encontrada.<br><span style="font-weight:400;font-size:11px;">Configure as dependências no Canvas ou desmarque "Só com dependência".</span>');
+                return;
             }
 
-            const todayOffset = Math.round((hoje-rangeStart)/(1000*60*60*24));
-            const todayPct = Math.max(0,Math.min(100,(todayOffset/totalDays)*100));
+            let tasks = (window.tasks || []).filter(t => {
+                if ((t.pde || 'desenvolvimento') !== pde) return false;
+                const tp = Array.isArray(t.projects) && t.projects.length ? t.projects : (t.project ? [t.project] : []);
+                if (!tp.includes(proj)) return false;
+                if (onlyLinked) return linkedIds.has(String(t.id));
+                return t.start || t.deadline;
+            }).sort((a, b) => (a.linkedStart||a.start||a.deadline||'').localeCompare(b.linkedStart||b.start||b.deadline||''));
 
-            let html = `<div style="display:flex;background:#f8fafc;border-bottom:2px solid #e2e8f0;position:sticky;top:0;z-index:2;">
-                <div style="width:${LABEL_W}px;flex-shrink:0;border-right:1px solid #e2e8f0;padding:8px 12px;font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.1em;">Atividade</div>
-                <div style="flex:1;display:flex;position:relative;">
-                    ${months.map(m=>{
-                        const ms = new Date(m.getFullYear(),m.getMonth(),1);
-                        const me = new Date(m.getFullYear(),m.getMonth()+1,0);
-                        const s = Math.max(0,Math.round((ms-rangeStart)/(1000*60*60*24)));
-                        const e = Math.min(totalDays,Math.round((me-rangeStart)/(1000*60*60*24)));
-                        const w = ((e-s)/totalDays)*100;
-                        return `<div style="position:absolute;left:${(s/totalDays)*100}%;width:${w}%;border-right:1px solid #e2e8f0;padding:8px 6px;font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.06em;overflow:hidden;white-space:nowrap;">
-                            ${m.toLocaleDateString('pt-BR',{month:'short',year:'2-digit'})}
-                        </div>`;
-                    }).join('')}
-                </div>
-            </div>`;
+            if (!tasks.length) {
+                empty('Sem atividades com datas neste empreendimento.');
+                return;
+            }
 
+            const critIds = gCritical(tasks, links);
+            const today   = new Date(TODAY_ISO + 'T00:00:00');
+            const DAY_MS  = 86400000;
+            const dStr    = d => d.toISOString().split('T')[0];
+
+            let minD = new Date(today), maxD = new Date(today);
             tasks.forEach(t => {
-                let st = t.status;
-                if (st!=='concluido'&&st!=='concluido_atraso'&&st!=='atraso'&&t.deadline) {
-                    if (new Date(t.deadline+'T00:00:00')<hoje) st='atraso';
-                }
-                const colorMap = {andamento:'#f59e0b',concluido:'#10b981',concluido_atraso:'#ea580c',atraso:'#ef4444',pendente:'#94a3b8'};
-                const color = colorMap[st]||'#94a3b8';
-                const sDate = t.start ? new Date(t.start+'T00:00:00') : new Date(t.deadline+'T00:00:00');
-                const eDate = t.deadline ? new Date(t.deadline+'T00:00:00') : sDate;
-                const sOff = Math.round((sDate-rangeStart)/(1000*60*60*24));
-                const eOff = Math.round((eDate-rangeStart)/(1000*60*60*24));
-                const bLeft = Math.max(0,(sOff/totalDays)*100);
-                const bRight = Math.min(100,(eOff/totalDays)*100);
-                const bW = Math.max(0.3,bRight-bLeft);
-                const owners = Array.isArray(t.owners)&&t.owners.length ? t.owners.join(', ') : (t.owner||'');
-                html += `<div class="gantt-row" style="display:flex;min-height:36px;border-bottom:1px solid #f1f5f9;" onclick="editTask('${t.id}')">
-                    <div style="width:${LABEL_W}px;flex-shrink:0;border-right:1px solid #e2e8f0;padding:6px 12px;overflow:hidden;">
-                        <div style="font-size:11px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.title||''}</div>
-                        <div style="font-size:9px;color:#94a3b8;margin-top:1px;">${owners}</div>
-                    </div>
-                    <div style="flex:1;position:relative;">
-                        ${todayOffset>=0&&todayOffset<=totalDays?`<div class="gantt-today" style="left:${todayPct}%;"></div>`:''}
-                        <div class="gantt-bar gantt-bar-${st}" style="left:${bLeft}%;width:${bW}%;background:${color};" title="${t.title} | ${st}"></div>
-                    </div>
-                </div>`;
+                const s = t.linkedStart||t.start, e = t.linkedDeadline||t.deadline;
+                if (s) { const d=new Date(s+'T00:00:00'); if(d<minD) minD=d; }
+                if (e) { const d=new Date(e+'T00:00:00'); if(d>maxD) maxD=d; }
             });
-            container.innerHTML = html;
+            minD.setDate(minD.getDate()-7);
+            maxD.setDate(maxD.getDate()+14);
+
+            const DAY_PX   = scale==='day'?40:scale==='week'?22:scale==='month'?8:scale==='quarter'?3:1.5;
+            const totalDays = Math.ceil((maxD-minD)/DAY_MS);
+            const GRID_W   = Math.max(800, totalDays*DAY_PX);
+            const ROW_H=40, HEAD_H=50;
+            const dateToX = s => Math.round((new Date(s+'T00:00:00')-minD)/DAY_MS)*DAY_PX;
+            const todayX  = dateToX(TODAY_ISO);
+            const MN=['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+            const QT=['T1','T2','T3','T4'];
+
+            let topRow='', botRow='', vlines='';
+
+            if (scale==='day'||scale==='week'||scale==='month') {
+                let cur=new Date(minD.getFullYear(),minD.getMonth(),1);
+                while(cur<maxD){
+                    const dim=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+                    const x=Math.max(0,dateToX(`${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,'0')}-01`));
+                    topRow+=`<div style="position:absolute;left:${x}px;width:${dim*DAY_PX}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;padding-left:6px;box-sizing:border-box;"><span style="font-size:9px;font-weight:700;color:#475569;white-space:nowrap;">${MN[cur.getMonth()]} ${cur.getFullYear()}</span></div>`;
+                    cur.setMonth(cur.getMonth()+1);
+                }
+                if(scale==='day'){
+                    let d=new Date(minD);
+                    while(d<maxD){
+                        const x=dateToX(dStr(d)),we=d.getDay()===0||d.getDay()===6;
+                        botRow+=`<div style="position:absolute;left:${x}px;width:${DAY_PX}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;background:${we?'#fef9c3':''}"><span style="font-size:8px;font-weight:700;color:${we?'#d97706':'#94a3b8'};">${d.getDate()}</span></div>`;
+                        vlines+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;width:${we?DAY_PX+'px':'1px'};background:${we?'rgba(254,249,195,.3)':'#f1f5f9'};pointer-events:none;"></div>`;
+                        d.setDate(d.getDate()+1);
+                    }
+                } else {
+                    let d=new Date(minD);const dow=d.getDay();d.setDate(d.getDate()-(dow===0?6:dow-1));
+                    while(d<maxD){
+                        const x=Math.max(0,dateToX(dStr(d)));
+                        botRow+=`<div style="position:absolute;left:${x}px;width:${7*DAY_PX}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;padding-left:4px;"><span style="font-size:8px;font-weight:700;color:#94a3b8;white-space:nowrap;">${d.getDate()}/${d.getMonth()+1}</span></div>`;
+                        vlines+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;width:1px;background:#e2e8f0;pointer-events:none;"></div>`;
+                        d.setDate(d.getDate()+7);
+                    }
+                }
+            } else if(scale==='quarter'){
+                let yr=new Date(minD.getFullYear(),0,1);
+                while(yr<maxD){
+                    const x=Math.max(0,dateToX(dStr(yr)));
+                    topRow+=`<div style="position:absolute;left:${x}px;width:${365*DAY_PX}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;padding-left:8px;"><span style="font-size:10px;font-weight:700;color:#1e293b;">${yr.getFullYear()}</span></div>`;
+                    yr.setFullYear(yr.getFullYear()+1);
+                }
+                let q=new Date(minD.getFullYear(),Math.floor(minD.getMonth()/3)*3,1);
+                while(q<maxD){
+                    const x=Math.max(0,dateToX(dStr(q)));
+                    const nq=new Date(q.getFullYear(),q.getMonth()+3,1);
+                    const w=Math.round((nq-q)/DAY_MS)*DAY_PX;
+                    botRow+=`<div style="position:absolute;left:${x}px;width:${w}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;padding-left:6px;"><span style="font-size:9px;font-weight:700;color:#64748b;">${QT[Math.floor(q.getMonth()/3)]}</span></div>`;
+                    vlines+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;width:1px;background:#e2e8f0;pointer-events:none;"></div>`;
+                    q.setMonth(q.getMonth()+3);
+                }
+            } else {
+                let yr=new Date(minD.getFullYear(),0,1);
+                while(yr<maxD){
+                    const x=Math.max(0,dateToX(dStr(yr)));
+                    topRow+=`<div style="position:absolute;left:${x}px;width:${365*DAY_PX}px;height:25px;border-right:2px solid #cbd5e1;display:flex;align-items:center;padding-left:8px;"><span style="font-size:11px;font-weight:700;color:#1e293b;">${yr.getFullYear()}</span></div>`;
+                    vlines+=`<div style="position:absolute;left:${x}px;top:0;bottom:0;width:2px;background:#cbd5e1;pointer-events:none;"></div>`;
+                    let q=new Date(yr.getFullYear(),0,1);
+                    for(let qi=0;qi<4;qi++){
+                        const qx=Math.max(0,dateToX(dStr(q)));
+                        const nq=new Date(q.getFullYear(),q.getMonth()+3,1);
+                        const w=Math.round((nq-q)/DAY_MS)*DAY_PX;
+                        botRow+=`<div style="position:absolute;left:${qx}px;width:${w}px;height:25px;border-right:1px solid #e2e8f0;display:flex;align-items:center;padding-left:4px;"><span style="font-size:8px;color:#94a3b8;">${QT[qi]}</span></div>`;
+                        q.setMonth(q.getMonth()+3);
+                    }
+                    yr.setFullYear(yr.getFullYear()+1);
+                }
+            }
+
+            const todayLine=`<div style="position:absolute;left:${todayX}px;top:0;bottom:0;width:2px;background:#6366f1;opacity:.6;pointer-events:none;z-index:5;"><div style="position:absolute;top:2px;left:3px;font-size:8px;font-weight:700;color:#6366f1;white-space:nowrap;background:#fff;padding:1px 3px;border-radius:2px;border:1px solid #6366f1;">HOJE</div></div>`;
+
+            hdrEl.style.cssText=`position:sticky;top:0;z-index:10;background:#f8fafc;border-bottom:2px solid #e2e8f0;width:${GRID_W}px;height:${HEAD_H}px;overflow:hidden;`;
+            hdrEl.innerHTML=`<div style="position:relative;height:25px;border-bottom:1px solid #e2e8f0;">${topRow}</div><div style="position:relative;height:25px;">${botRow}</div>`;
+
+            nameEl.innerHTML=tasks.map((t,idx)=>{
+                const isCrit=critIds.has(String(t.id));
+                const isDone=t.status==='concluido'||t.status==='concluido_atraso';
+                const col=isDone?'#10b981':isCrit?'#dc2626':'#1e293b';
+                const eStr=t.linkedDeadline||t.deadline||'';
+                const bg=idx%2===0?'#fff':'#f8fafc';
+                return `<div style="height:${ROW_H}px;padding:0 12px;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid #f1f5f9;background:${bg};overflow:hidden;" title="${t.title}"><div style="font-size:11px;font-weight:700;color:${col};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${isCrit?'⚡ ':''}${t.title}</div><div style="font-size:9px;color:#94a3b8;margin-top:1px;">${eStr?eStr.split('-').reverse().join('/'):''}</div></div>`;
+            }).join('');
+
+            const totalH=tasks.length*ROW_H;
+            let barsHtml=vlines+todayLine;
+            tasks.forEach((t,idx)=>{
+                const isCrit=critIds.has(String(t.id));
+                const isDone=t.status==='concluido'||t.status==='concluido_atraso';
+                const col=isDone?'#10b981':isCrit?'#dc2626':'#6366f1';
+                const sStr=t.linkedStart||t.start, eStr=t.linkedDeadline||t.deadline;
+                const bg=idx%2===0?'transparent':'rgba(248,250,252,.6)';
+                barsHtml+=`<div style="position:absolute;left:0;top:${idx*ROW_H}px;width:${GRID_W}px;height:${ROW_H}px;background:${bg};border-bottom:1px solid #f1f5f9;pointer-events:none;"></div>`;
+                if(sStr&&eStr){
+                    const bx=dateToX(sStr),bw=Math.max(DAY_PX,dateToX(eStr)-bx);
+                    const top=idx*ROW_H+(ROW_H-22)/2,pct=Math.min(100,t.progress||0);
+                    barsHtml+=`<div style="position:absolute;left:${bx}px;top:${top}px;width:${bw}px;height:22px;border-radius:5px;background:${col}20;border:1.5px solid ${col};overflow:hidden;cursor:pointer;box-sizing:border-box;" onclick="editTask('${t.id}')" title="${t.title}"><div style="height:100%;width:${pct}%;background:${col};opacity:.5;border-radius:3px;"></div>${bw>60?`<span style="position:absolute;left:6px;top:50%;transform:translateY(-50%);font-size:8px;font-weight:800;color:${col};white-space:nowrap;pointer-events:none;">${pct>0?pct+'%':''}</span>`:''}</div>`;
+                } else if(eStr){
+                    const mx=dateToX(eStr),my=idx*ROW_H+ROW_H/2-8;
+                    barsHtml+=`<div style="position:absolute;left:${mx-8}px;top:${my}px;width:16px;height:16px;background:${col};transform:rotate(45deg);border-radius:2px;cursor:pointer;" onclick="editTask('${t.id}')" title="${t.title}"></div>`;
+                }
+            });
+            barsEl.style.cssText=`position:relative;width:${GRID_W}px;height:${totalH}px;`;
+            barsEl.innerHTML=barsHtml;
+
+            svgEl.setAttribute('width',GRID_W); svgEl.setAttribute('height',totalH);
+            svgEl.style.cssText=`position:absolute;top:${HEAD_H}px;left:0;width:${GRID_W}px;height:${totalH}px;pointer-events:none;overflow:visible;`;
+            let svg=`<defs><marker id="ga" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#6366f1cc"/></marker><marker id="gac" markerWidth="6" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,6 2.5,0 5" fill="#dc2626cc"/></marker></defs>`;
+            links.forEach(lk=>{
+                const fi=tasks.findIndex(t=>String(t.id)===String(lk.from));
+                const ti=tasks.findIndex(t=>String(t.id)===String(lk.to));
+                if(fi<0||ti<0) return;
+                const ft=tasks[fi],tt=tasks[ti];
+                const isCrit=critIds.has(String(lk.from))&&critIds.has(String(lk.to));
+                const stroke=isCrit?'#dc2626cc':'#6366f1cc',marker=isCrit?'gac':'ga',dash=isCrit?'none':'4 2';
+                const fEnd=ft.linkedDeadline||ft.deadline,fStart=ft.linkedStart||ft.start||ft.deadline;
+                const tStart=tt.linkedStart||tt.start||tt.deadline,tEnd=tt.linkedDeadline||tt.deadline;
+                let x1,x2;
+                switch(lk.type){case'TI':x1=fEnd?dateToX(fEnd):0;x2=tStart?dateToX(tStart):0;break;case'II':x1=fStart?dateToX(fStart):0;x2=tStart?dateToX(tStart):0;break;case'TT':x1=fEnd?dateToX(fEnd):0;x2=tEnd?dateToX(tEnd):0;break;case'IT':x1=fStart?dateToX(fStart):0;x2=tEnd?dateToX(tEnd):0;break;default:x1=fEnd?dateToX(fEnd):0;x2=tStart?dateToX(tStart):0;}
+                const y1=fi*ROW_H+ROW_H/2,y2=ti*ROW_H+ROW_H/2,mid=x1+(x2-x1)*.45;
+                svg+=`<path d="M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}" stroke="${stroke}" stroke-width="1.5" fill="none" marker-end="url(#${marker})" stroke-dasharray="${dash}"/>`;
+                svg+=`<text x="${(x1+x2)/2}" y="${(y1+y2)/2-5}" text-anchor="middle" font-size="8" font-weight="700" fill="${stroke}">${lk.type||'TI'}${lk.lag>0?'+'+lk.lag+'d':''}</text>`;
+            });
+            svgEl.innerHTML=svg;
+            inner.style.width=GRID_W+'px';
+            const scroll=document.getElementById('gScroll');
+            if(scroll&&todayX>0) scroll.scrollLeft=Math.max(0,todayX-200);
         }
 
-        function exportFullGanttPNG() {
-            const el = document.getElementById('ganttFullInner');
-            if (!el || typeof html2canvas === 'undefined') { alert('html2canvas não disponível.'); return; }
-            html2canvas(el, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                const a = document.createElement('a');
-                a.download = 'gantt-pde.png';
-                a.href = canvas.toDataURL('image/png');
-                a.click();
+        function gExportPNG(){
+            const el=document.getElementById('gBody');
+            if(!el||typeof html2canvas==='undefined'){alert('html2canvas não disponível.');return;}
+            html2canvas(el,{scale:2,backgroundColor:'#fff'}).then(canvas=>{
+                const a=document.createElement('a');
+                a.download='gantt-'+(window._gProj||'pde')+'.png';
+                a.href=canvas.toDataURL('image/png');a.click();
             });
         }
+
+        window.gSetScale=gSetScale; window.gSyncScroll=gSyncScroll;
+        window.gOnProj=gOnProj; window.gInitTab=gInitTab;
+        window.gDraw=gDraw; window.gExportPNG=gExportPNG;
+
         // ══════════════════════════════════════════════════════
         function _toggleDarkMode() {
             const isDark = document.body.classList.toggle('dark');
@@ -6303,8 +6571,9 @@
                     </div>`;
                 statsRow.innerHTML =
                     card('Total concluídas', totalGeral, '#111111') +
+                    card('No prazo', totalGeral - atrasosGeral, '#10b981') +
                     card('Com atraso', atrasosGeral, '#ea580c') +
-                    card('% OKR (no prazo)', pctGeral + '%', pctGeral >= 90 ? '#059669' : pctGeral >= 70 ? '#d97706' : '#dc2626') +
+                    card('% no prazo', pctGeral + '%', pctGeral >= 90 ? '#059669' : pctGeral >= 70 ? '#d97706' : '#dc2626') +
                     (melhorMes !== '-' ? card('Melhor mês', `${melhorMes} (${melhorPct}%)`, '#059669') : '') +
                     (piorMes !== '-' && piorMes !== melhorMes ? card('Pior mês', `${piorMes} (${piorPct}%)`, '#dc2626') : '');
             }
@@ -7379,6 +7648,176 @@
             const header = document.getElementById('ganttHeaderScroll');
             if (header) header.scrollLeft = el.scrollLeft;
         }
+
+        // ══════════════════════════════════════════════════════
+        // OKR CONSOLIDADO DO HUB
+        // ══════════════════════════════════════════════════════
+        let _hubOkrChart = null;
+        function renderHubOkr() {
+            const pdeFilter   = (document.getElementById('hub-okr-pde-filter')?.value) || 'all';
+            const monthRange  = parseInt(document.getElementById('hub-okr-range')?.value ?? '12');
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+
+            const tasks = (window.tasks || []).filter(t => {
+                if (pdeFilter !== 'all' && (t.pde||'desenvolvimento') !== pdeFilter) return false;
+                const ok = t.status === 'concluido' || t.status === 'concluido_atraso';
+                return ok && t.completedDate;
+            });
+
+            // Determina meses a exibir (do mês mais antigo com dados até o mês atual, respeitando o filtro de período)
+            const allMonths = tasks.map(t => t.completedDate.slice(0,7)).sort();
+            const oldestMonth = allMonths[0];
+            const monthKeys = [];
+
+            if (!oldestMonth) {
+                const range = monthRange === 0 ? 12 : monthRange;
+                for (let i = range - 1; i >= 0; i--) {
+                    const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+                    monthKeys.push(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`);
+                }
+            } else {
+                let startKey = oldestMonth;
+                if (monthRange > 0) {
+                    const limitStart = new Date(hoje.getFullYear(), hoje.getMonth() - (monthRange - 1), 1);
+                    const limitKey = `${limitStart.getFullYear()}-${String(limitStart.getMonth()+1).padStart(2,'0')}`;
+                    startKey = oldestMonth < limitKey ? limitKey : oldestMonth;
+                }
+                const [sy, sm] = startKey.split('-').map(Number);
+                const [ey, em] = [hoje.getFullYear(), hoje.getMonth() + 1];
+                let y = sy, m = sm;
+                while (y < ey || (y === ey && m <= em)) {
+                    monthKeys.push(`${y}-${String(m).padStart(2,'0')}`);
+                    m++;
+                    if (m > 12) { m = 1; y++; }
+                }
+            }
+
+            // Agrupa por mês usando completedDate.slice(0,7)
+            const byMonth = {};
+            monthKeys.forEach(k => { byMonth[k] = { total: 0, comAtraso: 0 }; });
+            tasks.forEach(t => {
+                const k = t.completedDate.slice(0,7);
+                if (!byMonth[k]) byMonth[k] = { total: 0, comAtraso: 0 };
+                byMonth[k].total++;
+                if (t.status === 'concluido_atraso') byMonth[k].comAtraso++;
+            });
+
+            const labels = monthKeys.map(k => {
+                const [y, m] = k.split('-');
+                return new Date(parseInt(y), parseInt(m)-1, 1).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' }).replace('. de ', '/').replace('.','');
+            });
+            const totalArr    = monthKeys.map(k => byMonth[k]?.total || 0);
+            const atrasadoArr = monthKeys.map(k => byMonth[k]?.comAtraso || 0);
+            const noPrazoArr  = monthKeys.map((k,i) => totalArr[i] - atrasadoArr[i]);
+            const pctArr      = monthKeys.map((k,i) => totalArr[i] > 0 ? Math.round((noPrazoArr[i] / totalArr[i]) * 100) : 0);
+
+            const canvas = document.getElementById('hub-okr-chart');
+            if (!canvas) return;
+            if (_hubOkrChart) { _hubOkrChart.destroy(); _hubOkrChart = null; }
+
+            _hubOkrChart = new Chart(canvas.getContext('2d'), {
+                data: {
+                    labels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Concluídas no prazo',
+                            data: noPrazoArr,
+                            backgroundColor: '#10b981',
+                            borderRadius: 4,
+                            stack: 'stack'
+                        },
+                        {
+                            type: 'bar',
+                            label: 'Concluídas com Atraso',
+                            data: atrasadoArr,
+                            backgroundColor: '#ea580c',
+                            borderRadius: 4,
+                            stack: 'stack'
+                        },
+                        {
+                            type: 'line',
+                            label: '% no Prazo',
+                            data: pctArr,
+                            borderColor: '#10b981',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            pointBackgroundColor: '#10b981',
+                            pointRadius: 4,
+                            tension: 0.3,
+                            yAxisID: 'yPct',
+                            datalabels: { display: false }
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 10, weight: 'bold' } } },
+                        tooltip: {
+                            callbacks: {
+                                afterBody: (items) => {
+                                    const idx = items[0]?.dataIndex;
+                                    if (idx === undefined) return;
+                                    const pct = pctArr[idx];
+                                    const total = totalArr[idx];
+                                    return total > 0 ? [`─────────────`, `OKR: ${pct}% no prazo (${noPrazoArr[idx]}/${total})`] : [];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true, ticks: { font: { size: 10 } }, grid: { display: false } },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true,
+                            ticks: { stepSize: 1, font: { size: 10 } },
+                            title: { display: true, text: 'Qtd. atividades', font: { size: 9 } },
+                            grid: { color: 'rgba(0,0,0,0.05)' }
+                        },
+                        yPct: {
+                            position: 'right',
+                            beginAtZero: true,
+                            max: 100,
+                            ticks: { callback: v => v + '%', font: { size: 10 } },
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: '% no Prazo', font: { size: 9 } }
+                        }
+                    }
+                }
+            });
+
+            // Resumo
+            const resumoEl = document.getElementById('hub-okr-resumo');
+            if (resumoEl) {
+                const totalTasks = totalArr.reduce((a,b)=>a+b,0);
+                const totalAtr   = atrasadoArr.reduce((a,b)=>a+b,0);
+                const totalNoPrazo = totalTasks - totalAtr;
+                const pctGeral   = totalTasks > 0 ? Math.round((totalNoPrazo/totalTasks)*100) : 0;
+                resumoEl.innerHTML = `
+                    <div style="background:var(--hub-bar-bg);border-radius:8px;padding:10px 14px;">
+                        <div style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Total concluídas</div>
+                        <div style="font-size:20px;font-weight:900;color:var(--hub-metric-text);margin-top:2px;">${totalTasks}</div>
+                    </div>
+                    <div style="background:var(--hub-bar-bg);border-radius:8px;padding:10px 14px;">
+                        <div style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">No prazo</div>
+                        <div style="font-size:20px;font-weight:900;color:#10b981;margin-top:2px;">${totalNoPrazo}</div>
+                    </div>
+                    <div style="background:var(--hub-bar-bg);border-radius:8px;padding:10px 14px;">
+                        <div style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Com atraso</div>
+                        <div style="font-size:20px;font-weight:900;color:#ea580c;margin-top:2px;">${totalAtr}</div>
+                    </div>
+                    <div style="background:var(--hub-bar-bg);border-radius:8px;padding:10px 14px;">
+                        <div style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">% no prazo</div>
+                        <div style="font-size:20px;font-weight:900;color:${pctGeral>=90?'#10b981':pctGeral>=70?'#f59e0b':'#ef4444'};margin-top:2px;">${pctGeral}%</div>
+                    </div>`;
+            }
+        }
+        window.renderHubOkr = renderHubOkr;
+        // ══════════════════════════════════════════════════════
+
         window._saveCanvasData = window._saveCanvasData || (async () => {});
 
         // ══ Registra funções do HUB no window e processa fila ══
@@ -7401,6 +7840,7 @@
         window.closeHubConfigs = _closeHubConfigs;
         window.renderHubDashboard = _renderHubDashboard;
         window.toggleDarkMode  = _toggleDarkMode;
+        window.setGanttView = setGanttView;
 
         // Processa chamadas que chegaram antes do script carregar
         (window._hubQueue || []).forEach(item => {
