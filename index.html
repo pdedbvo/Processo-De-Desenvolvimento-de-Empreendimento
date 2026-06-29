@@ -731,9 +731,11 @@
                     <div style="font-family:'N27',sans-serif;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#7247F6;margin-bottom:8px;">Fase 01</div>
                     <h2 style="font-family:'N27',sans-serif;font-size:18px;font-weight:900;color:var(--hub-text-main);letter-spacing:-0.02em;margin-bottom:8px;line-height:1.2;">Pré-lançamento</h2>
                     <p style="font-size:11px;color:var(--hub-text-muted);line-height:1.6;font-weight:400;margin-bottom:20px;">Estudos de viabilidade, aprovações, compatibilização e desenvolvimento do produto.</p>
-                    <div style="display:flex;align-items:center;gap:6px;margin-top:auto;">
-                        <span style="width:6px;height:6px;border-radius:50%;background:#7247F6;display:inline-block;"></span>
-                        <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">🔒 Acesso restrito</span>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:auto;flex-wrap:wrap;">
+                        <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">🔒</span>
+                        <div id="hub-pre-badges" style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Carregando...</span>
+                        </div>
                     </div>
                 </div>
 
@@ -762,7 +764,9 @@
                     <p style="font-size:11px;color:var(--hub-text-muted);line-height:1.6;font-weight:400;margin-bottom:20px;">Habite-se, RIV, AVCB, implantação do condomínio e demais atividades dessa fase.</p>
                     <div style="display:flex;align-items:center;gap:6px;margin-top:auto;">
                         <span style="width:6px;height:6px;border-radius:50%;background:#FCBF44;display:inline-block;"></span>
-                        <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Ambiente pronto</span>
+                        <div id="hub-entrega-badges" style="display:flex;gap:6px;flex-wrap:wrap;">
+                            <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Carregando...</span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1172,11 +1176,57 @@
                 </div>
             </div>
 
+            <!-- Barra de ações em lote (aparece ao selecionar) -->
+            <div id="bulk-bar" style="display:none;position:sticky;top:52px;z-index:30;background:#111;color:#fff;padding:10px 16px;border-radius:10px;margin-bottom:8px;display:none;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+                <span id="bulk-count" style="font-size:11px;font-weight:700;font-family:'N27',sans-serif;letter-spacing:0.06em;white-space:nowrap;">0 selecionados</span>
+                <div style="width:1px;height:20px;background:#333;"></div>
+                <button onclick="bulkSelectAll()" style="font-size:10px;font-weight:700;background:transparent;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;" onmouseover="this.style.borderColor='#888'" onmouseout="this.style.borderColor='#444'">Selecionar todos</button>
+                <button onclick="bulkDeselectAll()" style="font-size:10px;font-weight:700;background:transparent;border:1px solid #444;color:#aaa;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;" onmouseover="this.style.borderColor='#888'" onmouseout="this.style.borderColor='#444'">Desmarcar todos</button>
+                <div style="width:1px;height:20px;background:#333;"></div>
+                <!-- Alterar status -->
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:10px;color:#888;font-weight:700;">Status:</span>
+                    <select id="bulk-status-sel" style="font-size:10px;font-weight:700;background:#1a1a1a;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:6px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                        <option value="">— escolha —</option>
+                        <option value="pendente">Pendente</option>
+                        <option value="andamento">Andamento</option>
+                        <option value="concluido">Concluído</option>
+                        <option value="atraso">Atraso</option>
+                    </select>
+                    <button onclick="bulkChangeStatus()" style="font-size:10px;font-weight:700;background:#334155;border:none;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;">Aplicar</button>
+                </div>
+                <!-- Alterar responsável -->
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:10px;color:#888;font-weight:700;">Responsável:</span>
+                    <select id="bulk-owner-sel" style="font-size:10px;font-weight:700;background:#1a1a1a;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:6px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                        <option value="">— escolha —</option>
+                    </select>
+                    <button onclick="bulkChangeOwner()" style="font-size:10px;font-weight:700;background:#334155;border:none;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;">Aplicar</button>
+                </div>
+                <!-- Mover PDE -->
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:10px;color:#888;font-weight:700;">Mover para PDE:</span>
+                    <select id="bulk-pde-sel" style="font-size:10px;font-weight:700;background:#1a1a1a;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:6px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                        <option value="">— escolha —</option>
+                        <option value="prelancamento">Pré-lançamento</option>
+                        <option value="desenvolvimento">Desenvolvimento</option>
+                        <option value="entrega">Entrega e Implantação</option>
+                    </select>
+                    <button onclick="bulkChangePDE()" style="font-size:10px;font-weight:700;background:#334155;border:none;color:#fff;padding:4px 10px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;">Mover</button>
+                </div>
+                <div style="margin-left:auto;">
+                    <button onclick="bulkDelete()" style="font-size:10px;font-weight:900;background:#dc2626;border:none;color:#fff;padding:6px 14px;border-radius:6px;cursor:pointer;font-family:'N27',sans-serif;letter-spacing:0.06em;" onmouseover="this.style.background='#b91c1c'" onmouseout="this.style.background='#dc2626'">🗑 Excluir selecionados</button>
+                </div>
+            </div>
+
             <div class="card overflow-hidden">
                 <div class="overflow-x-auto">
                     <table id="taskTable" class="w-full text-left border-collapse" style="table-layout:fixed;">
                         <thead class="bg-slate-50 border-b border-slate-200 text-[10px] uppercase text-slate-500 tracking-widest" style="font-family:'N27',sans-serif;font-weight:300;letter-spacing:0.1em;">
                             <tr>
+                                <th class="py-3 px-2" style="width:36px;">
+                                    <input type="checkbox" id="bulk-check-all" onchange="bulkToggleAll(this.checked)" style="accent-color:#6366f1;cursor:pointer;width:14px;height:14px;">
+                                </th>
                                 <th class="py-3 px-2" style="width:24px;"></th>
                                 <th class="py-3 px-3 sortable-th" style="width:120px;" onclick="setSortColumn('project')">Empreendimento<span class="sort-icon"></span><div class="col-resizer"></div></th>
                                 <th class="py-3 px-3 sortable-th" style="width:300px;" onclick="setSortColumn('title')">Atividade & Histórico<span class="sort-icon"></span><div class="col-resizer"></div></th>
@@ -2545,13 +2595,30 @@
                     </div>`;
             });
 
-            // Atualiza badge do card de desenvolvimento
+            // Atualiza badges de todos os 3 cards
+            const hoje2 = hoje;
+            const updateBadge = (elId, pdeKey) => {
+                const el = document.getElementById(elId);
+                if (!el) return;
+                const ts = (window.tasks||[]).filter(t => (t.pde||'desenvolvimento') === pdeKey);
+                const atr = ts.filter(t => t.status === 'atraso' || (t.status !== 'concluido' && t.status !== 'concluido_atraso' && t.deadline && new Date(t.deadline+'T00:00:00') < hoje2)).length;
+                if (ts.length === 0) {
+                    el.innerHTML = `<span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">Ambiente pronto</span>`;
+                } else {
+                    el.innerHTML = `<span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">${ts.length} atividades</span>` +
+                        (atr > 0 ? `<span style="background:#3b0000;color:#ef4444;font-size:9px;font-weight:900;border-radius:4px;padding:2px 7px;margin-left:4px;">${atr} atrasadas</span>` : '');
+                }
+            };
+            updateBadge('hub-pre-badges', 'prelancamento');
+            updateBadge('hub-entrega-badges', 'entrega');
+
+            // Badge desenvolvimento (já existia)
             const devBadges = document.getElementById('hub-dev-badges');
             if (devBadges) {
                 const devTasks = (window.tasks||[]).filter(t => (t.pde||'desenvolvimento') === 'desenvolvimento');
                 const devAtr = devTasks.filter(t => t.status === 'atraso' || (t.status !== 'concluido' && t.status !== 'concluido_atraso' && t.deadline && new Date(t.deadline+'T00:00:00') < hoje)).length;
                 devBadges.innerHTML =
-                    `<span style="font-size:9px;font-weight:700;color:#444;text-transform:uppercase;letter-spacing:0.08em;">${devTasks.length} atividades</span>` +
+                    `<span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;">${devTasks.length} atividades</span>` +
                     (devAtr > 0 ? `<span style="background:#3b0000;color:#ef4444;font-size:9px;font-weight:900;border-radius:4px;padding:2px 7px;margin-left:4px;">${devAtr} atrasadas</span>` : '');
             }
         }
@@ -3166,6 +3233,9 @@
                         <span class="text-[10px] font-black">${search ? highlightSearch(p, search) : p}</span>
                     </div>`).join('');
                 row.innerHTML = `
+                    <td class="py-3 px-2 align-top text-center">
+                        <input type="checkbox" class="bulk-cb" data-id="${t.id}" onchange="bulkUpdateBar()" style="accent-color:#6366f1;cursor:pointer;width:14px;height:14px;">
+                    </td>
                     <td class="py-3 px-2 align-top text-center">
                         <span class="drag-handle" title="Arrastar para reordenar">⠿</span>
                     </td>
@@ -7930,22 +8000,25 @@
         // IMPORTAR / EXPORTAR / MODELO
         // ══════════════════════════════════════════════════════
         const PDE_COLS = [
-            { key: 'id_linha',       tip: 'Número único da linha. Referenciado pela coluna predecessora.' },
-            { key: 'titulo',         tip: 'Nome da atividade. Obrigatório.' },
-            { key: 'empreendimento', tip: 'Nome do projeto/empreendimento.' },
-            { key: 'setor',          tip: 'Setor responsável (ex: JURÍDICO, ENGENHARIA).' },
-            { key: 'responsaveis',   tip: 'Nomes separados por vírgula.' },
-            { key: 'status',         tip: 'pendente | andamento | atraso | concluido. Padrão: pendente.' },
-            { key: 'prioridade',     tip: 'normal | urgente. Padrão: normal.' },
-            { key: 'inicio',         tip: 'Data de início DD/MM/AAAA.' },
-            { key: 'prazo',          tip: 'Data de prazo DD/MM/AAAA.' },
-            { key: 'progresso',      tip: '0 a 100. Padrão: 0.' },
-            { key: 'caminho_critico',tip: 'sim | não. Padrão: não.' },
-            { key: 'predecessora',   tip: 'id_linha da atividade predecessora. Deixe vazio para card avulso.' },
-            { key: 'tipo_ligacao',   tip: 'TI | II | TT | IT. Padrão: TI.' },
-            { key: 'lag_dias',       tip: 'Dias de folga após predecessora. Padrão: 0.' },
-            { key: 'pde',            tip: 'prelancamento | desenvolvimento | entrega. Padrão: PDE ativo.' },
-            { key: 'descricao',      tip: 'Observações livres.' },
+            { key: 'id_linha',                tip: 'Número único da linha. Referenciado pela coluna predecessora.' },
+            { key: 'titulo',                  tip: 'Nome da atividade. Obrigatório.' },
+            { key: 'empreendimento',           tip: 'Nome do projeto/empreendimento.' },
+            { key: 'setor',                   tip: 'Setor responsável (ex: JURÍDICO, ENGENHARIA).' },
+            { key: 'responsaveis',            tip: 'Nomes separados por vírgula.' },
+            { key: 'status',                  tip: 'pendente | andamento | atraso | concluido. Padrão: pendente.' },
+            { key: 'prioridade',              tip: 'normal | urgente. Padrão: normal.' },
+            { key: 'inicio',                  tip: 'Data de início DD/MM/AAAA.' },
+            { key: 'prazo',                   tip: 'Data de prazo DD/MM/AAAA.' },
+            { key: 'progresso',               tip: '0 a 100. Padrão: 0.' },
+            { key: 'caminho_critico',         tip: 'sim | não. Padrão: não.' },
+            { key: 'predecessora',            tip: 'id_linha da atividade predecessora. Deixe vazio para card avulso.' },
+            { key: 'tipo_ligacao',            tip: 'TI | II | TT | IT. Padrão: TI.' },
+            { key: 'lag_dias',                tip: 'Dias de folga após predecessora. Padrão: 0.' },
+            { key: 'pde',                     tip: 'prelancamento | desenvolvimento | entrega. Padrão: PDE ativo.' },
+            { key: 'proximos_passos',         tip: 'Próximos passos da atividade. Pode ficar em branco.' },
+            { key: 'problemas',               tip: 'Problemas / observações. Pode ficar em branco.' },
+            { key: 'historico_reprogramacoes',tip: 'Histórico de reprogramações de prazo. Não edite manualmente.' },
+            { key: 'historico_notas',         tip: 'Histórico de avanços em JSON. Formato: [{"date":"AAAA-MM-DD","text":"..."},...]. Pode ficar em branco.' },
         ];
 
         function parseDateBR(str) {
@@ -7961,23 +8034,25 @@
             if (typeof XLSX === 'undefined') { alert('Biblioteca XLSX não carregada.'); return; }
             const wb = XLSX.utils.book_new();
             const exampleRows = [
-                ['1','Estudo de Viabilidade','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','normal','01/07/2026','31/07/2026','0','não','','TI','0','desenvolvimento','Análise preliminar'],
-                ['2','Memorial Descritivo','BE BONIFÁCIO','JURÍDICO','Maria Costa','pendente','normal','01/08/2026','31/08/2026','0','sim','1','TI','0','desenvolvimento','Aguarda estudo'],
-                ['3','Aprovação Concessionárias','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','urgente','01/09/2026','30/09/2026','0','não','2','TI','5','desenvolvimento',''],
+                ['1','Estudo de Viabilidade','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','normal','01/07/2026','31/07/2026','0','não','','TI','0','desenvolvimento','Levantar documentação','','',''],
+                ['2','Memorial Descritivo','BE BONIFÁCIO','JURÍDICO','Maria Costa','pendente','normal','01/08/2026','31/08/2026','0','sim','1','TI','0','desenvolvimento','Aguardar aprovação','Reunião pendente','',''],
+                ['3','Aprovação Concessionárias','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','urgente','01/09/2026','30/09/2026','0','não','2','TI','5','desenvolvimento','','','',''],
             ];
             const wsData = [PDE_COLS.map(c=>c.key), ...exampleRows];
             const ws = XLSX.utils.aoa_to_sheet(wsData);
-            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36].map(w=>({wch:w}));
+            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36,36,40,60].map(w=>({wch:w}));
             XLSX.utils.book_append_sheet(wb, ws, 'Atividades');
             const instrRows = [['CAMPO','DESCRIÇÃO / VALORES ACEITOS'], ...PDE_COLS.map(c=>[c.key,c.tip]),
                 [''],['DICAS IMPORTANTES'],
                 ['• Não altere a ordem ou nome das colunas'],
                 ['• Datas devem estar no formato DD/MM/AAAA'],
                 ['• Para cards avulsos, deixe predecessora, tipo_ligacao e lag_dias em branco'],
-                ['• Atividades com título já existente no PDE serão ignoradas'],
+                ['• Atividades com título já existente no PDE de destino serão ignoradas'],
+                ['• Os campos de histórico podem ficar em branco — o card será criado sem histórico'],
+                ['• O campo pde da planilha é ignorado — sempre importa para o PDE ativo na tela'],
             ];
             const wsI = XLSX.utils.aoa_to_sheet(instrRows);
-            wsI['!cols'] = [{wch:18},{wch:70}];
+            wsI['!cols'] = [{wch:25},{wch:80}];
             XLSX.utils.book_append_sheet(wb, wsI, 'Instruções');
             XLSX.writeFile(wb, 'modelo-pde-importacao.xlsx');
         }
@@ -7996,22 +8071,28 @@
                 t.start?t.start.split('-').reverse().join('/'):'',
                 t.deadline?t.deadline.split('-').reverse().join('/'):'',
                 t.progress||0, t.criticalPath?'sim':'não',
-                '','TI',0, t.pde||'desenvolvimento', t.problems||'',
+                '','TI',0, t.pde||'desenvolvimento',
+                t.nextSteps||'',
+                t.problems||'',
+                t.oldExpectations||'',
+                t.notes||'',
             ]);
             const ws = XLSX.utils.aoa_to_sheet([PDE_COLS.map(c=>c.key),...rows]);
-            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36].map(w=>({wch:w}));
+            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36,36,40,60].map(w=>({wch:w}));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Atividades');
             XLSX.writeFile(wb, `pde-export-${pde}-${TODAY_ISO}.xlsx`);
         }
 
         function pdeImportarAtv() {
+            const pde = window._activePDE || 'desenvolvimento';
+            const labels = { prelancamento:'Pré-lançamento', desenvolvimento:'Desenvolvimento', entrega:'Entrega e Implantação' };
             document.getElementById('pde-import-modal').style.display = 'flex';
             document.getElementById('import-dropzone').style.display = 'block';
             document.getElementById('import-preview').style.display = 'none';
             document.getElementById('import-confirm-btn').style.display = 'none';
             document.getElementById('import-footer-msg').textContent = '';
-            document.getElementById('import-modal-sub').textContent = 'Selecione o arquivo .xlsx';
+            document.getElementById('import-modal-sub').textContent = `Importando para: ${labels[pde] || pde} — o campo PDE da planilha será ignorado`;
             document.getElementById('import-file-input').value = '';
             window._importRows = null;
         }
@@ -8034,7 +8115,10 @@
                     if (missing.length) { alert(`Colunas obrigatórias não encontradas: ${missing.join(', ')}`); return; }
                     const getCol = (row,key) => { const i=header.indexOf(key); return i>=0?String(row[i]||'').trim():''; };
                     const pdeAtivo = window._activePDE||'desenvolvimento';
-                    const existingTitles = new Set((window.tasks||[]).map(t=>(t.title||'').toLowerCase().trim()));
+                    // Chave única = título + PDE — mesmo título em PDEs diferentes é permitido
+                    const existingKeys = new Set((window.tasks||[]).map(t =>
+                        (t.title||'').toLowerCase().trim() + '||' + (t.pde||'desenvolvimento')
+                    ));
                     const parsed = dataRows.map((row,ri) => {
                         const r = {
                             _row: ri+2,
@@ -8052,14 +8136,18 @@
                             predecessora: getCol(row,'predecessora'),
                             tipo_ligacao: (getCol(row,'tipo_ligacao')||'TI').toUpperCase(),
                             lag_dias: parseInt(getCol(row,'lag_dias'))||0,
-                            pde: getCol(row,'pde')||pdeAtivo,
-                            descricao: getCol(row,'descricao'),
+                            pde: pdeAtivo, // sempre importa para o PDE ativo na tela
+                            proximos_passos:          getCol(row,'proximos_passos'),
+                            problemas:                getCol(row,'problemas'),
+                            historico_reprogramacoes: getCol(row,'historico_reprogramacoes'),
+                            historico_notas:          getCol(row,'historico_notas'),
                             _erros:[], _defaults:[], _status:'ok',
                         };
                         if (!r.titulo) { r._erros.push('título vazio'); r._status='erro'; }
-                        if (existingTitles.has(r.titulo.toLowerCase())) { r._erros.push('já existe'); r._status='ignorado'; }
+                        // Duplicata: título + PDE de destino (o ativo)
+                        const chave = r.titulo.toLowerCase().trim() + '||' + pdeAtivo;
+                        if (existingKeys.has(chave)) { r._erros.push('já existe neste PDE'); r._status='ignorado'; }
                         if (!['pendente','andamento','atraso','concluido'].includes(r.status)) { r._defaults.push('status→pendente'); r.status='pendente'; }
-                        if (!['prelancamento','desenvolvimento','entrega'].includes(r.pde)) { r._defaults.push(`pde→${pdeAtivo}`); r.pde=pdeAtivo; }
                         if (r._status!=='erro'&&r._status!=='ignorado') r._status=r._defaults.length>0?'default':'ok';
                         return r;
                     });
@@ -8083,7 +8171,7 @@
             document.getElementById('import-footer-msg').textContent=`${criable} atividades serão criadas · ${err} ignoradas`;
             document.getElementById('import-modal-sub').textContent=`${rows.length} linhas lidas`;
             if (criable>0) document.getElementById('import-confirm-btn').style.display='inline-block';
-            const cols=['id_linha','titulo','empreendimento','setor','responsaveis','status','inicio','prazo','predecessora','tipo_ligacao','pde'];
+            const cols=['id_linha','titulo','empreendimento','setor','responsaveis','status','inicio','prazo','predecessora','pde','proximos_passos','problemas'];
             document.getElementById('import-thead').innerHTML=`<tr>${cols.map(c=>`<th style="padding:7px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.08em;white-space:nowrap;border-bottom:2px solid #e2e8f0;">${c}</th>`).join('')}<th style="padding:7px 10px;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">obs</th></tr>`;
             const sC={ok:'#f0fdf4',default:'#fffbeb',erro:'#fef2f2',ignorado:'#f8fafc'};
             const sB={ok:'#10b981',default:'#f59e0b',erro:'#ef4444',ignorado:'#94a3b8'};
@@ -8117,8 +8205,11 @@
                         start:r.inicio||null, deadline:r.prazo||null,
                         linkedStart:null, linkedDeadline:null,
                         progress:r.progresso, criticalPath:r.caminho_critico,
-                        problems:r.descricao||'', nextSteps:'', oldExpectations:'',
-                        notes:[], completedDate:null, pde:r.pde,
+                        problems:r.problemas||'',
+                        nextSteps:r.proximos_passos||'',
+                        oldExpectations:r.historico_reprogramacoes||'',
+                        notes:r.historico_notas||'',
+                        completedDate:null, pde:r.pde,
                         updatedAt:Date.now(), updatedBy:window._currentUserName||'Importação PDE',
                     });
                     if (proj) {
@@ -8147,6 +8238,143 @@
                 alert('Erro ao importar: '+err.message);
             }
         }
+
+
+        // ══════════════════════════════════════════════════════
+        // SELEÇÃO EM LOTE
+        // ══════════════════════════════════════════════════════
+        function bulkGetSelected() {
+            return [...document.querySelectorAll('.bulk-cb:checked')].map(cb => cb.dataset.id);
+        }
+
+        function bulkUpdateBar() {
+            const ids = bulkGetSelected();
+            const bar = document.getElementById('bulk-bar');
+            const countEl = document.getElementById('bulk-count');
+            if (!bar) return;
+            if (ids.length > 0) {
+                bar.style.display = 'flex';
+                countEl.textContent = `${ids.length} selecionado${ids.length > 1 ? 's' : ''}`;
+                // Popula select de responsáveis
+                const ownerSel = document.getElementById('bulk-owner-sel');
+                if (ownerSel) {
+                    const users = (window.tasks || []).flatMap(t => Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []));
+                    const uniq = [...new Set(users)].sort();
+                    ownerSel.innerHTML = '<option value="">— escolha —</option>' + uniq.map(u => `<option value="${u}">${u}</option>`).join('');
+                }
+            } else {
+                bar.style.display = 'none';
+                const allCb = document.getElementById('bulk-check-all');
+                if (allCb) allCb.checked = false;
+            }
+        }
+
+        function bulkToggleAll(checked) {
+            document.querySelectorAll('.bulk-cb').forEach(cb => { cb.checked = checked; });
+            bulkUpdateBar();
+        }
+
+        function bulkSelectAll() {
+            document.querySelectorAll('.bulk-cb').forEach(cb => { cb.checked = true; });
+            const allCb = document.getElementById('bulk-check-all');
+            if (allCb) allCb.checked = true;
+            bulkUpdateBar();
+        }
+
+        function bulkDeselectAll() {
+            document.querySelectorAll('.bulk-cb').forEach(cb => { cb.checked = false; });
+            const allCb = document.getElementById('bulk-check-all');
+            if (allCb) allCb.checked = false;
+            bulkUpdateBar();
+        }
+
+        async function bulkDelete() {
+            const ids = bulkGetSelected();
+            if (!ids.length) return;
+            const tasks = ids.map(id => (window.tasks||[]).find(t => String(t.id) === String(id))).filter(Boolean);
+            const names = tasks.slice(0,3).map(t => `"${t.title}"`).join(', ') + (tasks.length > 3 ? ` e mais ${tasks.length-3}...` : '');
+            if (!confirm(`⚠️ Excluir permanentemente ${ids.length} atividade(s)?
+
+${names}
+
+Essa ação não pode ser desfeita.`)) return;
+            try {
+                await Promise.all(ids.map(id => window.deleteFromFirebase(id)));
+                bulkDeselectAll();
+            } catch(e) { alert('Erro ao excluir: ' + e.message); }
+        }
+
+        async function bulkChangeStatus() {
+            const ids = bulkGetSelected();
+            const status = document.getElementById('bulk-status-sel').value;
+            if (!ids.length || !status) { alert('Selecione atividades e um status.'); return; }
+            if (!confirm(`Alterar status de ${ids.length} atividade(s) para "${status}"?`)) return;
+            try {
+                const today = TODAY_ISO;
+                await Promise.all(ids.map(id => {
+                    const t = (window.tasks||[]).find(x => String(x.id) === String(id));
+                    if (!t) return;
+                    const isConcluding = status === 'concluido' || status === 'concluido_atraso';
+                    const wasConcluded = t.status === 'concluido' || t.status === 'concluido_atraso';
+                    return window.saveToFirebase({
+                        ...t, status,
+                        completedDate: isConcluding && !wasConcluded ? today : (!isConcluding ? null : t.completedDate),
+                        updatedAt: Date.now(), updatedBy: window._currentUserName || 'Lote'
+                    });
+                }));
+                document.getElementById('bulk-status-sel').value = '';
+                bulkDeselectAll();
+            } catch(e) { alert('Erro: ' + e.message); }
+        }
+
+        async function bulkChangeOwner() {
+            const ids = bulkGetSelected();
+            const owner = document.getElementById('bulk-owner-sel').value;
+            if (!ids.length || !owner) { alert('Selecione atividades e um responsável.'); return; }
+            if (!confirm(`Alterar responsável de ${ids.length} atividade(s) para "${owner}"?`)) return;
+            try {
+                await Promise.all(ids.map(id => {
+                    const t = (window.tasks||[]).find(x => String(x.id) === String(id));
+                    if (!t) return;
+                    return window.saveToFirebase({
+                        ...t, owner, owners: [owner],
+                        updatedAt: Date.now(), updatedBy: window._currentUserName || 'Lote'
+                    });
+                }));
+                document.getElementById('bulk-owner-sel').value = '';
+                bulkDeselectAll();
+            } catch(e) { alert('Erro: ' + e.message); }
+        }
+
+        async function bulkChangePDE() {
+            const ids = bulkGetSelected();
+            const pde = document.getElementById('bulk-pde-sel').value;
+            const labels = { prelancamento:'Pré-lançamento', desenvolvimento:'Desenvolvimento', entrega:'Entrega e Implantação' };
+            if (!ids.length || !pde) { alert('Selecione atividades e um PDE de destino.'); return; }
+            if (!confirm(`Mover ${ids.length} atividade(s) para "${labels[pde]}"?`)) return;
+            try {
+                await Promise.all(ids.map(id => {
+                    const t = (window.tasks||[]).find(x => String(x.id) === String(id));
+                    if (!t) return;
+                    return window.saveToFirebase({
+                        ...t, pde,
+                        updatedAt: Date.now(), updatedBy: window._currentUserName || 'Lote'
+                    });
+                }));
+                document.getElementById('bulk-pde-sel').value = '';
+                bulkDeselectAll();
+            } catch(e) { alert('Erro: ' + e.message); }
+        }
+
+        window.bulkUpdateBar    = bulkUpdateBar;
+        window.bulkToggleAll    = bulkToggleAll;
+        window.bulkSelectAll    = bulkSelectAll;
+        window.bulkDeselectAll  = bulkDeselectAll;
+        window.bulkDelete       = bulkDelete;
+        window.bulkChangeStatus = bulkChangeStatus;
+        window.bulkChangeOwner  = bulkChangeOwner;
+        window.bulkChangePDE    = bulkChangePDE;
+        // ══════════════════════════════════════════════════════
 
         window.pdeDownloadModelo=pdeDownloadModelo;
         window.pdeImportarAtv=pdeImportarAtv;
