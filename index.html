@@ -791,23 +791,23 @@
 
                 <!-- Cards métricas -->
                 <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:28px;">
-                    <div style="background:var(--hub-metric-bg);border:1px solid var(--hub-metric-border);border-radius:12px;padding:20px;">
+                    <div style="background:var(--hub-metric-bg);border:1px solid #c7d2fe;border-top:3px solid #6366f1;border-radius:12px;padding:20px;">
                         <div style="font-size:9px;font-weight:700;color:var(--hub-text-label);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Total</div>
                         <div id="hub-stat-total" style="font-size:28px;font-weight:900;color:var(--hub-metric-text);font-family:'N27',sans-serif;">0</div>
                     </div>
-                    <div style="background:var(--hub-metric-bg);border:1px solid var(--hub-metric-border);border-radius:12px;padding:20px;">
+                    <div style="background:var(--hub-metric-bg);border:1px solid #cbd5e1;border-top:3px solid #94a3b8;border-radius:12px;padding:20px;">
                         <div style="font-size:9px;font-weight:700;color:var(--hub-text-label);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Pendentes</div>
                         <div id="hub-stat-pendente" style="font-size:28px;font-weight:900;color:#94a3b8;font-family:'N27',sans-serif;">0</div>
                     </div>
-                    <div style="background:var(--hub-metric-bg);border:1px solid var(--hub-metric-border);border-radius:12px;padding:20px;">
+                    <div style="background:var(--hub-metric-bg);border:1px solid #fcd9a8;border-top:3px solid #f59e0b;border-radius:12px;padding:20px;">
                         <div style="font-size:9px;font-weight:700;color:var(--hub-text-label);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Andamento</div>
                         <div id="hub-stat-andamento" style="font-size:28px;font-weight:900;color:#f59e0b;font-family:'N27',sans-serif;">0</div>
                     </div>
-                    <div style="background:var(--hub-metric-bg);border:1px solid var(--hub-metric-border);border-radius:12px;padding:20px;">
+                    <div style="background:var(--hub-metric-bg);border:1px solid #a7f3d0;border-top:3px solid #10b981;border-radius:12px;padding:20px;">
                         <div style="font-size:9px;font-weight:700;color:var(--hub-text-label);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Concluídas</div>
                         <div id="hub-stat-concluido" style="font-size:28px;font-weight:900;color:#10b981;font-family:'N27',sans-serif;">0</div>
                     </div>
-                    <div style="background:var(--hub-metric-bg);border:1px solid #fca5a5;border-radius:12px;padding:20px;">
+                    <div style="background:var(--hub-metric-bg);border:1px solid #fca5a5;border-top:3px solid #ef4444;border-radius:12px;padding:20px;">
                         <div style="font-size:9px;font-weight:700;color:var(--hub-text-label);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:8px;">Atrasadas</div>
                         <div id="hub-stat-atraso" style="font-size:28px;font-weight:900;color:#ef4444;font-family:'N27',sans-serif;">0</div>
                     </div>
@@ -824,8 +824,9 @@
                         <h3 style="font-family:'N27',sans-serif;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:var(--hub-text-label);">📊 OKR — Conclusões com Atraso por Mês</h3>
                         <p style="font-size:9px;color:var(--hub-text-muted);margin-top:4px;">Das atividades concluídas em cada mês, qual % foi concluída com atraso.</p>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
                         <select id="hub-okr-pde-filter" onchange="renderHubOkr()" style="background:var(--hub-card-bg);border:1px solid var(--hub-btn-border);color:var(--hub-text-label);font-size:10px;font-weight:700;border-radius:6px;padding:5px 10px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
+                            <option value="all_no_pre" selected>Todos (exceto Pré-lançamento)</option>
                             <option value="all">Todos os PDEs</option>
                             <option value="prelancamento">Pré-lançamento</option>
                             <option value="desenvolvimento">Desenvolvimento</option>
@@ -2710,23 +2711,87 @@
         }
 
         function gCritical(tasks, links) {
-            const EF = {};
-            tasks.forEach(t => { EF[String(t.id)] = t.linkedDeadline || t.deadline || t.start || TODAY_ISO; });
+            if (!tasks.length) return new Set();
+
+            const DAY_MS = 86400000;
+            const toDate = s => s ? new Date(s + 'T00:00:00') : null;
+            const ids = tasks.map(t => String(t.id));
+            const idSet = new Set(ids);
+
+            // Duração de cada tarefa em dias (mínimo 1)
+            const dur = {};
             tasks.forEach(t => {
-                links.filter(l => String(l.to) === String(t.id)).forEach(l => {
-                    const f = EF[String(l.from)];
-                    if (f && f > EF[String(t.id)]) EF[String(t.id)] = f;
-                });
+                const s = toDate(t.linkedStart || t.start);
+                const e = toDate(t.linkedDeadline || t.deadline);
+                dur[String(t.id)] = (s && e) ? Math.max(1, Math.round((e - s) / DAY_MS)) : 1;
             });
-            const maxEF = Object.values(EF).reduce((a, b) => b > a ? b : a, '');
-            const crit  = new Set();
-            function trace(id) {
-                if (crit.has(id)) return; crit.add(id);
-                links.filter(l => String(l.to) === id).forEach(l => {
-                    if (EF[String(l.from)] === EF[id]) trace(String(l.from));
+
+            // Filtra links válidos (ambas as pontas existem no conjunto de tasks atual)
+            const validLinks = links.filter(l => idSet.has(String(l.from)) && idSet.has(String(l.to)));
+
+            // Mapa de predecessores e sucessores
+            const preds = {}, succs = {};
+            ids.forEach(id => { preds[id] = []; succs[id] = []; });
+            validLinks.forEach(l => {
+                const f = String(l.from), t = String(l.to);
+                preds[t].push({ id: f, lag: parseInt(l.lag) || 0 });
+                succs[f].push({ id: t, lag: parseInt(l.lag) || 0 });
+            });
+
+            // ── Forward pass: Early Start / Early Finish (em "dias" relativos, índice 0) ──
+            const ES = {}, EF = {};
+            // Ordenação topológica simples via repetição (grafos pequenos, sem ciclos esperados)
+            const resolved = new Set();
+            let changed = true, iterations = 0;
+            ids.forEach(id => { ES[id] = 0; });
+
+            while (changed && iterations < ids.length + 5) {
+                changed = false; iterations++;
+                ids.forEach(id => {
+                    const ps = preds[id];
+                    let maxEF = 0;
+                    ps.forEach(p => {
+                        const pEF = (EF[p.id] !== undefined ? EF[p.id] : 0) + p.lag;
+                        if (pEF > maxEF) maxEF = pEF;
+                    });
+                    const newES = ps.length ? maxEF : 0;
+                    const newEF = newES + dur[id];
+                    if (ES[id] !== newES || EF[id] === undefined) {
+                        ES[id] = newES; EF[id] = newEF; changed = true;
+                    } else if (EF[id] !== newEF) {
+                        EF[id] = newEF; changed = true;
+                    }
                 });
             }
-            tasks.filter(t => EF[String(t.id)] === maxEF).forEach(t => trace(String(t.id)));
+
+            const projectEnd = Math.max(...ids.map(id => EF[id] || 0));
+
+            // ── Backward pass: Late Start / Late Finish ──
+            const LF = {}, LS = {};
+            ids.forEach(id => { LF[id] = projectEnd; });
+            changed = true; iterations = 0;
+            while (changed && iterations < ids.length + 5) {
+                changed = false; iterations++;
+                ids.forEach(id => {
+                    const ss = succs[id];
+                    let minLS = projectEnd;
+                    if (ss.length) {
+                        minLS = Math.min(...ss.map(s => (LS[s.id] !== undefined ? LS[s.id] : projectEnd) - s.lag));
+                    }
+                    const newLF = ss.length ? minLS : projectEnd;
+                    const newLS = newLF - dur[id];
+                    if (LF[id] !== newLF) { LF[id] = newLF; changed = true; }
+                    if (LS[id] !== newLS || LS[id] === undefined) { LS[id] = newLS; changed = true; }
+                });
+            }
+
+            // ── Slack (folga) = LS - ES. Caminho crítico = slack ≈ 0 ──
+            const crit = new Set();
+            ids.forEach(id => {
+                const slack = (LS[id] !== undefined ? LS[id] : 0) - (ES[id] !== undefined ? ES[id] : 0);
+                if (slack <= 0) crit.add(id);
+            });
+
             return crit;
         }
 
@@ -7832,12 +7897,14 @@
         // ══════════════════════════════════════════════════════
         let _hubOkrChart = null;
         function renderHubOkr() {
-            const pdeFilter   = (document.getElementById('hub-okr-pde-filter')?.value) || 'all';
+            const pdeFilter   = (document.getElementById('hub-okr-pde-filter')?.value) || 'all_no_pre';
             const monthRange  = parseInt(document.getElementById('hub-okr-range')?.value ?? '12');
             const hoje = new Date(TODAY_ISO + 'T00:00:00');
 
             const tasks = (window.tasks || []).filter(t => {
-                if (pdeFilter !== 'all' && (t.pde||'desenvolvimento') !== pdeFilter) return false;
+                const tPde = t.pde || 'desenvolvimento';
+                if (pdeFilter === 'all_no_pre' && tPde === 'prelancamento') return false;
+                if (pdeFilter !== 'all' && pdeFilter !== 'all_no_pre' && tPde !== pdeFilter) return false;
                 const ok = t.status === 'concluido' || t.status === 'concluido_atraso';
                 return ok && t.completedDate;
             });
@@ -7886,6 +7953,7 @@
             });
             const totalArr    = monthKeys.map(k => byMonth[k]?.total || 0);
             const atrasadoArr = monthKeys.map(k => byMonth[k]?.comAtraso || 0);
+
             const noPrazoArr  = monthKeys.map((k,i) => totalArr[i] - atrasadoArr[i]);
             const pctArr      = monthKeys.map((k,i) => totalArr[i] > 0 ? Math.round((noPrazoArr[i] / totalArr[i]) * 100) : 0);
 
@@ -8011,9 +8079,10 @@
             { key: 'prazo',                   tip: 'Data de prazo DD/MM/AAAA.' },
             { key: 'progresso',               tip: '0 a 100. Padrão: 0.' },
             { key: 'caminho_critico',         tip: 'sim | não. Padrão: não.' },
-            { key: 'predecessora',            tip: 'id_linha da atividade predecessora. Deixe vazio para card avulso.' },
-            { key: 'tipo_ligacao',            tip: 'TI | II | TT | IT. Padrão: TI.' },
-            { key: 'lag_dias',                tip: 'Dias de folga após predecessora. Padrão: 0.' },
+            { key: 'predecessora',            tip: 'id_linha da(s) predecessora(s). Múltiplas: separe por vírgula (ex: 2,5,7). Deixe vazio para card avulso.' },
+            { key: 'sucessora',               tip: 'id_linha da(s) sucessora(s). Múltiplas: separe por vírgula (ex: 8,9). Cria ligação inversa (esta atividade é predecessora da informada).' },
+            { key: 'tipo_ligacao',            tip: 'TI | II | TT | IT. Se houver múltiplas predecessoras/sucessoras, separe por vírgula na mesma ordem (ex: TI,II,TI). Se só 1 valor, aplica a todas. Padrão: TI.' },
+            { key: 'lag_dias',                tip: 'Dias de folga. Se houver múltiplas predecessoras/sucessoras, separe por vírgula na mesma ordem (ex: 0,3,0). Se só 1 valor, aplica a todas. Padrão: 0.' },
             { key: 'pde',                     tip: 'prelancamento | desenvolvimento | entrega. Padrão: PDE ativo.' },
             { key: 'proximos_passos',         tip: 'Próximos passos da atividade. Pode ficar em branco.' },
             { key: 'problemas',               tip: 'Problemas / observações. Pode ficar em branco.' },
@@ -8034,19 +8103,24 @@
             if (typeof XLSX === 'undefined') { alert('Biblioteca XLSX não carregada.'); return; }
             const wb = XLSX.utils.book_new();
             const exampleRows = [
-                ['1','Estudo de Viabilidade','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','normal','01/07/2026','31/07/2026','0','não','','TI','0','desenvolvimento','Levantar documentação','','',''],
-                ['2','Memorial Descritivo','BE BONIFÁCIO','JURÍDICO','Maria Costa','pendente','normal','01/08/2026','31/08/2026','0','sim','1','TI','0','desenvolvimento','Aguardar aprovação','Reunião pendente','',''],
-                ['3','Aprovação Concessionárias','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','urgente','01/09/2026','30/09/2026','0','não','2','TI','5','desenvolvimento','','','',''],
+                ['1','Estudo de Viabilidade','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','normal','01/07/2026','31/07/2026','0','não','','','TI','0','desenvolvimento','Levantar documentação','','',''],
+                ['2','Memorial Descritivo','BE BONIFÁCIO','JURÍDICO','Maria Costa','pendente','normal','01/08/2026','31/08/2026','0','sim','1','','TI','0','desenvolvimento','Aguardar aprovação','Reunião pendente','',''],
+                ['3','Projeto Estrutural','BE BONIFÁCIO','ENGENHARIA','Pedro Lima','pendente','normal','01/08/2026','15/08/2026','0','não','1','','TI','0','desenvolvimento','','','',''],
+                ['4','Aprovação Concessionárias','BE BONIFÁCIO','ENGENHARIA','João Silva','pendente','urgente','01/09/2026','30/09/2026','0','sim','2,3','','TI,II','5,0','desenvolvimento','','','',''],
             ];
             const wsData = [PDE_COLS.map(c=>c.key), ...exampleRows];
             const ws = XLSX.utils.aoa_to_sheet(wsData);
-            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36,36,40,60].map(w=>({wch:w}));
+            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,16,16,14,10,16,36,36,40,60].map(w=>({wch:w}));
             XLSX.utils.book_append_sheet(wb, ws, 'Atividades');
             const instrRows = [['CAMPO','DESCRIÇÃO / VALORES ACEITOS'], ...PDE_COLS.map(c=>[c.key,c.tip]),
                 [''],['DICAS IMPORTANTES'],
                 ['• Não altere a ordem ou nome das colunas'],
                 ['• Datas devem estar no formato DD/MM/AAAA'],
-                ['• Para cards avulsos, deixe predecessora, tipo_ligacao e lag_dias em branco'],
+                ['• Para cards avulsos, deixe predecessora, sucessora, tipo_ligacao e lag_dias em branco'],
+                ['• Para múltiplas predecessoras/sucessoras: separe os IDs por vírgula, ex: 2,5,7'],
+                ['• Se cada predecessora tiver tipo/lag diferente: separe tipo_ligacao e lag_dias por vírgula na MESMA ORDEM dos IDs'],
+                ['• Exemplo: predecessora=2,5,7 | tipo_ligacao=TI,II,TI | lag_dias=0,3,0'],
+                ['• Se só preencher 1 valor em tipo_ligacao ou lag_dias, ele se aplica a todas as predecessoras/sucessoras da linha'],
                 ['• Atividades com título já existente no PDE de destino serão ignoradas'],
                 ['• Os campos de histórico podem ficar em branco — o card será criado sem histórico'],
                 ['• O campo pde da planilha é ignorado — sempre importa para o PDE ativo na tela'],
@@ -8071,14 +8145,14 @@
                 t.start?t.start.split('-').reverse().join('/'):'',
                 t.deadline?t.deadline.split('-').reverse().join('/'):'',
                 t.progress||0, t.criticalPath?'sim':'não',
-                '','TI',0, t.pde||'desenvolvimento',
+                '', '', 'TI', 0, t.pde||'desenvolvimento',
                 t.nextSteps||'',
                 t.problems||'',
                 t.oldExpectations||'',
                 t.notes||'',
             ]);
             const ws = XLSX.utils.aoa_to_sheet([PDE_COLS.map(c=>c.key),...rows]);
-            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,14,12,10,16,36,36,40,60].map(w=>({wch:w}));
+            ws['!cols'] = [8,28,22,18,26,12,10,14,14,10,14,16,16,14,10,16,36,36,40,60].map(w=>({wch:w}));
             const wb = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(wb, ws, 'Atividades');
             XLSX.writeFile(wb, `pde-export-${pde}-${TODAY_ISO}.xlsx`);
@@ -8133,9 +8207,10 @@
                             prazo: parseDateBR(getCol(row,'prazo')),
                             progresso: parseInt(getCol(row,'progresso'))||0,
                             caminho_critico: getCol(row,'caminho_critico').toLowerCase()==='sim',
-                            predecessora: getCol(row,'predecessora'),
-                            tipo_ligacao: (getCol(row,'tipo_ligacao')||'TI').toUpperCase(),
-                            lag_dias: parseInt(getCol(row,'lag_dias'))||0,
+                            predecessora: getCol(row,'predecessora'), // pode ter múltiplos IDs separados por vírgula
+                            sucessora: getCol(row,'sucessora'),       // pode ter múltiplos IDs separados por vírgula
+                            tipo_ligacao: getCol(row,'tipo_ligacao') || 'TI', // pode ter múltiplos valores por vírgula (1 por predecessora/sucessora)
+                            lag_dias: getCol(row,'lag_dias') || '0',         // pode ter múltiplos valores por vírgula (1 por predecessora/sucessora)
                             pde: pdeAtivo, // sempre importa para o PDE ativo na tela
                             proximos_passos:          getCol(row,'proximos_passos'),
                             problemas:                getCol(row,'problemas'),
@@ -8171,7 +8246,7 @@
             document.getElementById('import-footer-msg').textContent=`${criable} atividades serão criadas · ${err} ignoradas`;
             document.getElementById('import-modal-sub').textContent=`${rows.length} linhas lidas`;
             if (criable>0) document.getElementById('import-confirm-btn').style.display='inline-block';
-            const cols=['id_linha','titulo','empreendimento','setor','responsaveis','status','inicio','prazo','predecessora','pde','proximos_passos','problemas'];
+            const cols=['id_linha','titulo','empreendimento','setor','status','inicio','prazo','predecessora','sucessora','tipo_ligacao','lag_dias','pde'];
             document.getElementById('import-thead').innerHTML=`<tr>${cols.map(c=>`<th style="padding:7px 10px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:0.08em;white-space:nowrap;border-bottom:2px solid #e2e8f0;">${c}</th>`).join('')}<th style="padding:7px 10px;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:2px solid #e2e8f0;">obs</th></tr>`;
             const sC={ok:'#f0fdf4',default:'#fffbeb',erro:'#fef2f2',ignorado:'#f8fafc'};
             const sB={ok:'#10b981',default:'#f59e0b',erro:'#ef4444',ignorado:'#94a3b8'};
@@ -8219,12 +8294,53 @@
                     }
                 }
                 for (const r of rows) {
-                    if (!r.predecessora||!r.empreendimento) continue;
-                    const fromFid=idMap[r.predecessora], toFid=idMap[r.id_linha];
-                    if (!fromFid||!toFid) continue;
-                    const proj=r.empreendimento;
+                    if (!r.empreendimento) continue;
+                    const proj = r.empreendimento;
                     if (!canvasMap[proj]) canvasMap[proj]={nodes:{},links:[]};
-                    canvasMap[proj].links.push({from:fromFid,to:toFid,type:r.tipo_ligacao||'TI',lag:r.lag_dias||0});
+                    const toFidSelf = idMap[r.id_linha];
+
+                    // Helper: expande uma lista "a,b,c" e casa por posição com tipos/lags
+                    // Se tipos/lags tiver 1 item só, repete para todos; senão casa por índice.
+                    const expand = (idsStr, typesStr, lagsStr) => {
+                        const ids   = (idsStr||'').split(',').map(s=>s.trim()).filter(Boolean);
+                        const types = (typesStr||'').split(',').map(s=>s.trim().toUpperCase()).filter(Boolean);
+                        const lags  = (lagsStr||'').split(',').map(s=>s.trim()).filter(Boolean);
+                        return ids.map((id, i) => ({
+                            id,
+                            type: types.length > 1 ? (types[i] || 'TI') : (types[0] || 'TI'),
+                            lag:  lags.length  > 1 ? (parseInt(lags[i])||0) : (parseInt(lags[0])||0),
+                        }));
+                    };
+
+                    // Predecessoras (múltiplas, cada uma com seu tipo/lag por posição)
+                    if (r.predecessora) {
+                        expand(r.predecessora, r.tipo_ligacao, r.lag_dias).forEach(p => {
+                            const fromFid = idMap[p.id];
+                            if (fromFid && toFidSelf) {
+                                canvasMap[proj].links.push({from:fromFid, to:toFidSelf, type:p.type, lag:p.lag});
+                            }
+                        });
+                    }
+
+                    // Sucessoras (múltiplas, cada uma com seu tipo/lag por posição) — direção inversa
+                    if (r.sucessora) {
+                        expand(r.sucessora, r.tipo_ligacao, r.lag_dias).forEach(s => {
+                            const toFid = idMap[s.id];
+                            if (toFidSelf && toFid) {
+                                canvasMap[proj].links.push({from:toFidSelf, to:toFid, type:s.type, lag:s.lag});
+                            }
+                        });
+                    }
+                }
+                // Remove links duplicados (caso a mesma ligação tenha sido criada via predecessora E sucessora)
+                for (const proj of Object.keys(canvasMap)) {
+                    const seen = new Set();
+                    canvasMap[proj].links = canvasMap[proj].links.filter(l => {
+                        const key = `${l.from}->${l.to}`;
+                        if (seen.has(key)) return false;
+                        seen.add(key);
+                        return true;
+                    });
                 }
                 for (const [proj,data] of Object.entries(canvasMap)) {
                     const existing=await window._getCanvasData(proj);
