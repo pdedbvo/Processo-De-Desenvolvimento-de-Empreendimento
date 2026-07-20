@@ -643,6 +643,13 @@
             });
             window.configs.empreendimentos.sort((a,b) => (a.name||'').localeCompare(b.name||''));
             window.configs.setores.sort((a,b) => (a.name||'').localeCompare(b.name||''));
+            // Carrega imagens surpresa (até 3, ordenadas por slot)
+            window.configs.surpresa = [];
+            snap.forEach(d => {
+                const cfg = d.data();
+                if (cfg.type === 'surpresa' && cfg.image) window.configs.surpresa.push(cfg);
+            });
+            window.configs.surpresa.sort((a,b) => (a.slot||0)-(b.slot||0));
             renderConfigsTable();
             updateConfigSelects();
             loadRelatorioConfig();
@@ -692,7 +699,7 @@
             --hub-bar-bg:#e4e4e7;
         }
     </style>
-    <div id="hub-overlay" style="display:block;position:fixed;inset:0;z-index:200;background:var(--hub-bg);overflow-y:auto;transition:background 0.3s;">
+    <div id="hub-overlay" style="display:block;position:fixed;inset:0;z-index:200;background:var(--hub-bg);overflow-y:auto;transition:background 0.3s;" onclick="surpresaMaybeShow()">
         <div style="position:absolute;inset:0;background-image:linear-gradient(var(--hub-grid) 1px,transparent 1px),linear-gradient(90deg,var(--hub-grid) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;"></div>
         <div style="position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 50% 20%,rgba(100,100,100,0.06) 0%,transparent 70%);pointer-events:none;"></div>
 
@@ -1808,6 +1815,55 @@
             </div>
         </div>
 
+        <!-- Imagem Surpresa Semanal -->
+        <div class="card p-6">
+            <div class="mb-4">
+                <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">🎉 Imagem Surpresa Semanal</h2>
+                <p class="text-[10px] text-slate-400 mt-1">Até 3 imagens em slide. Aparecem para todos na primeira interação com o HUB ou ao entrar em um PDE.</p>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;">
+                <!-- Slot 1 -->
+                <div style="border:1.5px dashed #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+                    <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Imagem 1</div>
+                    <div id="surpresa-preview-0" style="width:100%;aspect-ratio:1;background:#f8fafc;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:24px;color:#cbd5e1;">🖼</span>
+                    </div>
+                    <input type="file" id="surpresa-input-0" accept="image/*" style="display:none" onchange="surpresaPreview(0,this)">
+                    <div style="display:flex;gap:6px;width:100%;">
+                        <button onclick="document.getElementById('surpresa-input-0').click()" style="flex:1;padding:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:10px;font-weight:700;color:#475569;cursor:pointer;">📁 Selecionar</button>
+                        <button onclick="surpresaSave(0)" style="flex:1;padding:6px;background:#111;border:none;border-radius:6px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;">✓ Salvar</button>
+                    </div>
+                    <button onclick="surpresaRemove(0)" style="width:100%;padding:5px;background:#fff;border:1px solid #fca5a5;border-radius:6px;font-size:10px;font-weight:700;color:#dc2626;cursor:pointer;">✕ Remover</button>
+                </div>
+                <!-- Slot 2 -->
+                <div style="border:1.5px dashed #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+                    <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Imagem 2</div>
+                    <div id="surpresa-preview-1" style="width:100%;aspect-ratio:1;background:#f8fafc;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:24px;color:#cbd5e1;">🖼</span>
+                    </div>
+                    <input type="file" id="surpresa-input-1" accept="image/*" style="display:none" onchange="surpresaPreview(1,this)">
+                    <div style="display:flex;gap:6px;width:100%;">
+                        <button onclick="document.getElementById('surpresa-input-1').click()" style="flex:1;padding:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:10px;font-weight:700;color:#475569;cursor:pointer;">📁 Selecionar</button>
+                        <button onclick="surpresaSave(1)" style="flex:1;padding:6px;background:#111;border:none;border-radius:6px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;">✓ Salvar</button>
+                    </div>
+                    <button onclick="surpresaRemove(1)" style="width:100%;padding:5px;background:#fff;border:1px solid #fca5a5;border-radius:6px;font-size:10px;font-weight:700;color:#dc2626;cursor:pointer;">✕ Remover</button>
+                </div>
+                <!-- Slot 3 -->
+                <div style="border:1.5px dashed #e2e8f0;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:center;">
+                    <div style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Imagem 3</div>
+                    <div id="surpresa-preview-2" style="width:100%;aspect-ratio:1;background:#f8fafc;border-radius:8px;overflow:hidden;display:flex;align-items:center;justify-content:center;">
+                        <span style="font-size:24px;color:#cbd5e1;">🖼</span>
+                    </div>
+                    <input type="file" id="surpresa-input-2" accept="image/*" style="display:none" onchange="surpresaPreview(2,this)">
+                    <div style="display:flex;gap:6px;width:100%;">
+                        <button onclick="document.getElementById('surpresa-input-2').click()" style="flex:1;padding:6px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;font-size:10px;font-weight:700;color:#475569;cursor:pointer;">📁 Selecionar</button>
+                        <button onclick="surpresaSave(2)" style="flex:1;padding:6px;background:#111;border:none;border-radius:6px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;">✓ Salvar</button>
+                    </div>
+                    <button onclick="surpresaRemove(2)" style="width:100%;padding:5px;background:#fff;border:1px solid #fca5a5;border-radius:6px;font-size:10px;font-weight:700;color:#dc2626;cursor:pointer;">✕ Remover</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Zona de Perigo -->
         <div class="card p-6" style="border:1.5px solid #fca5a5;">
             <div class="flex items-center gap-3 mb-4">
@@ -2497,6 +2553,8 @@
             window._activePDE = pde;
             // Esconde HUB
             document.getElementById('hub-overlay').style.display = 'none';
+            // Mostra surpresa se ainda não foi exibida nesta sessão
+            setTimeout(() => { if (typeof surpresaMaybeShow === 'function') surpresaMaybeShow(); }, 400);
 
             // Mostra badge no header
             const meta = PDE_META[pde] || {};
@@ -2543,7 +2601,6 @@
         }
 
         function _openHubConfigs() {
-            // Move o elemento real para dentro do modal (preserva event handlers)
             const body = document.getElementById('hub-configs-body');
             const src  = document.getElementById('tab-content-usuarios');
             if (body && src) {
@@ -2552,6 +2609,8 @@
                 body.appendChild(src);
             }
             document.getElementById('hub-configs-modal').style.display = 'flex';
+            // Renderiza previews das imagens surpresa salvas
+            setTimeout(() => { if (typeof renderSurpresaPreviews === 'function') renderSurpresaPreviews(); }, 100);
         }
 
         function _closeHubConfigs() {
@@ -8705,42 +8764,204 @@ Essa ação não pode ser desfeita.`)) return;
                 return;
             }
             const pdeLabel = { prelancamento:'Pré-lançamento', desenvolvimento:'Desenvolvimento', entrega:'Entrega e Implantação' };
-            el.innerHTML = `<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:10px;">
-                <table style="width:100%;border-collapse:collapse;font-size:11px;">
-                    <thead style="background:#f8fafc;">
-                        <tr>
-                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Atividade</th>
-                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Empreendimento</th>
-                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">PDE</th>
-                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Arquivada em</th>
-                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        ${archived.map((t,i) => {
-                            const bg = i%2===0?'#fff':'#f8fafc';
-                            const dt = t.archivedAt ? new Date(t.archivedAt).toLocaleDateString('pt-BR') : '—';
-                            const proj = t.project || (Array.isArray(t.projects)&&t.projects[0]) || '—';
-                            const pde = pdeLabel[t.pde||'desenvolvimento'] || t.pde || '—';
-                            return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
-                                <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${t.title||'—'}</td>
-                                <td style="padding:8px 12px;color:#64748b;">${proj}</td>
-                                <td style="padding:8px 12px;color:#64748b;">${pde}</td>
-                                <td style="padding:8px 12px;color:#94a3b8;">${dt}</td>
-                                <td style="padding:8px 12px;">
-                                    <button onclick="restoreTask('${t.id}')" style="padding:4px 12px;border:1.5px solid #10b981;background:#f0fdf4;color:#10b981;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;" onmouseover="this.style.background='#10b981';this.style.color='#fff'" onmouseout="this.style.background='#f0fdf4';this.style.color='#10b981'">↩ Restaurar</button>
-                                </td>
-                            </tr>`;
-                        }).join('')}
-                    </tbody>
-                </table>
-            </div>`;
+            el.innerHTML = `
+                <div id="archived-bulk-bar" style="display:none;align-items:center;gap:10px;margin-bottom:10px;padding:8px 12px;background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;">
+                    <span id="archived-bulk-count" style="font-size:11px;font-weight:700;color:#065f46;">0 selecionadas</span>
+                    <button onclick="archivedRestoreBulk()" style="padding:5px 14px;background:#10b981;border:none;border-radius:6px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;font-family:'N27',sans-serif;">↩ Restaurar selecionadas</button>
+                </div>
+                <div style="overflow:auto;border:1px solid #e2e8f0;border-radius:10px;">
+                    <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                        <thead style="background:#f8fafc;">
+                            <tr>
+                                <th style="padding:8px 12px;border-bottom:2px solid #e2e8f0;width:36px;">
+                                    <input type="checkbox" id="archived-check-all" onchange="archivedToggleAll(this.checked)" style="accent-color:#10b981;cursor:pointer;width:14px;height:14px;">
+                                </th>
+                                <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Atividade</th>
+                                <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Empreendimento</th>
+                                <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">PDE</th>
+                                <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Arquivada em</th>
+                                <th style="padding:8px 12px;border-bottom:2px solid #e2e8f0;"></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${archived.map((t,i) => {
+                                const bg = i%2===0?'#fff':'#f8fafc';
+                                const dt = t.archivedAt ? new Date(t.archivedAt).toLocaleDateString('pt-BR') : '—';
+                                const proj = t.project || (Array.isArray(t.projects)&&t.projects[0]) || '—';
+                                const pde = pdeLabel[t.pde||'desenvolvimento'] || t.pde || '—';
+                                return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
+                                    <td style="padding:8px 12px;text-align:center;">
+                                        <input type="checkbox" class="archived-cb" data-id="${t.id}" onchange="archivedUpdateBulkBar()" style="accent-color:#10b981;cursor:pointer;width:14px;height:14px;">
+                                    </td>
+                                    <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${t.title||'—'}</td>
+                                    <td style="padding:8px 12px;color:#64748b;">${proj}</td>
+                                    <td style="padding:8px 12px;color:#64748b;">${pde}</td>
+                                    <td style="padding:8px 12px;color:#94a3b8;">${dt}</td>
+                                    <td style="padding:8px 12px;">
+                                        <button onclick="restoreTask('${t.id}')" style="padding:4px 12px;border:1.5px solid #10b981;background:#f0fdf4;color:#10b981;border-radius:6px;font-size:10px;font-weight:700;cursor:pointer;" onmouseover="this.style.background='#10b981';this.style.color='#fff'" onmouseout="this.style.background='#f0fdf4';this.style.color='#10b981'">↩ Restaurar</button>
+                                    </td>
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
         }
+
+        function archivedUpdateBulkBar() {
+            const checked = document.querySelectorAll('.archived-cb:checked');
+            const bar = document.getElementById('archived-bulk-bar');
+            const count = document.getElementById('archived-bulk-count');
+            if (bar) bar.style.display = checked.length > 0 ? 'flex' : 'none';
+            if (count) count.textContent = `${checked.length} selecionada${checked.length !== 1 ? 's' : ''}`;
+        }
+
+        function archivedToggleAll(checked) {
+            document.querySelectorAll('.archived-cb').forEach(cb => { cb.checked = checked; });
+            archivedUpdateBulkBar();
+        }
+
+        async function archivedRestoreBulk() {
+            const ids = [...document.querySelectorAll('.archived-cb:checked')].map(cb => cb.dataset.id);
+            if (!ids.length) return;
+            if (!confirm(`↩ Restaurar ${ids.length} atividade(s) selecionadas?`)) return;
+            try {
+                await Promise.all(ids.map(id => {
+                    const t = (window.tasks||[]).find(x => String(x.id) === String(id));
+                    if (!t) return;
+                    return window.saveToFirebase({ ...t, archived: false, archivedAt: null, updatedAt: Date.now(), updatedBy: window._currentUserName || 'Sistema' });
+                }));
+                renderArchivedList();
+            } catch(e) { alert('Erro ao restaurar: ' + e.message); }
+        }
+
+        window.archivedUpdateBulkBar = archivedUpdateBulkBar;
+        window.archivedToggleAll     = archivedToggleAll;
+        window.archivedRestoreBulk   = archivedRestoreBulk;
 
         window.archiveTask      = archiveTask;
         window.bulkArchive      = bulkArchive;
         window.restoreTask      = restoreTask;
         window.renderArchivedList = renderArchivedList;
+
+        // ══════════════════════════════════════════════════════
+        // SURPRESA SEMANAL — Slide de imagens
+        // ══════════════════════════════════════════════════════
+        window._surpresaShown = false;
+        window._surpresaIdx   = 0;
+        window._surpresaImgs  = []; // base64 strings
+
+        function surpresaMaybeShow() {
+            if (window._surpresaShown) return;
+            const imgs = ((window.configs && window.configs.surpresa) || []).map(c => c.image).filter(Boolean);
+            if (!imgs.length) return;
+            window._surpresaShown = true;
+            window._surpresaImgs  = imgs;
+            window._surpresaIdx   = 0;
+            surpresaRender();
+            document.getElementById('surpresa-modal').style.display = 'flex';
+        }
+
+        function surpresaRender() {
+            const imgs = window._surpresaImgs;
+            const idx  = window._surpresaIdx;
+            const imgEl  = document.getElementById('surpresa-img');
+            const dotsEl = document.getElementById('surpresa-dots');
+            const prev   = document.getElementById('surpresa-prev');
+            const next   = document.getElementById('surpresa-next');
+            if (imgEl) imgEl.src = imgs[idx];
+            if (prev)  prev.style.display  = imgs.length > 1 ? 'block' : 'none';
+            if (next)  next.style.display  = imgs.length > 1 ? 'block' : 'none';
+            if (dotsEl) {
+                dotsEl.innerHTML = imgs.map((_,i) =>
+                    `<div style="width:8px;height:8px;border-radius:50%;background:${i===idx?'#fff':'rgba(255,255,255,0.35)'};cursor:pointer;transition:all 0.2s;" onclick="window._surpresaIdx=${i};surpresaRender()"></div>`
+                ).join('');
+            }
+        }
+
+        function surpresaSlide(dir) {
+            const len = window._surpresaImgs.length;
+            window._surpresaIdx = (window._surpresaIdx + dir + len) % len;
+            surpresaRender();
+        }
+
+        function surpresaClose() {
+            document.getElementById('surpresa-modal').style.display = 'none';
+        }
+
+        // Upload de imagem — converte para base64 e mostra preview
+        function surpresaPreview(slot, input) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                // Comprime via canvas para max 600px
+                const img = new Image();
+                img.onload = () => {
+                    const MAX = 700;
+                    const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width  = Math.round(img.width  * scale);
+                    canvas.height = Math.round(img.height * scale);
+                    canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const b64 = canvas.toDataURL('image/jpeg', 0.7);
+                    const preview = document.getElementById(`surpresa-preview-${slot}`);
+                    if (preview) preview.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:cover;">`;
+                    window[`_surpresaB64_${slot}`] = b64;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Salva imagem no Firebase
+        async function surpresaSave(slot) {
+            const b64 = window[`_surpresaB64_${slot}`];
+            if (!b64) { alert('Selecione uma imagem primeiro.'); return; }
+            try {
+                const docId = `surpresa_${slot}`;
+                await window.saveConfig({ id: docId, type: 'surpresa', slot, image: b64 });
+                alert(`✓ Imagem ${slot+1} salva! Todos verão na próxima abertura.`);
+                window._surpresaShown = false;
+            } catch(e) { alert('Erro ao salvar: ' + e.message); }
+        }
+
+        // Remove imagem do Firebase
+        async function surpresaRemove(slot) {
+            if (!confirm(`Remover imagem ${slot+1}?`)) return;
+            try {
+                const docId = `surpresa_${slot}`;
+                await window.deleteConfig(docId);
+                const preview = document.getElementById(`surpresa-preview-${slot}`);
+                if (preview) preview.innerHTML = '<span style="font-size:24px;color:#cbd5e1;">🖼</span>';
+                window[`_surpresaB64_${slot}`] = null;
+                window._surpresaShown = false;
+            } catch(e) { alert('Erro ao remover: ' + e.message); }
+        }
+
+        // Renderiza preview das imagens já salvas nas configs
+        function renderSurpresaPreviews() {
+            const saved = ((window.configs && window.configs.surpresa) || []);
+            for (let s = 0; s < 3; s++) {
+                const cfg = saved.find(c => c.slot === s);
+                const preview = document.getElementById(`surpresa-preview-${s}`);
+                if (!preview) continue;
+                if (cfg && cfg.image) {
+                    preview.innerHTML = `<img src="${cfg.image}" style="width:100%;height:100%;object-fit:cover;">`;
+                    window[`_surpresaB64_${s}`] = cfg.image;
+                } else {
+                    preview.innerHTML = '<span style="font-size:24px;color:#cbd5e1;">🖼</span>';
+                }
+            }
+        }
+
+        window.surpresaMaybeShow  = surpresaMaybeShow;
+        window.surpresaSlide      = surpresaSlide;
+        window.surpresaClose      = surpresaClose;
+        window.surpresaPreview    = surpresaPreview;
+        window.surpresaSave       = surpresaSave;
+        window.surpresaRemove     = surpresaRemove;
+        window.renderSurpresaPreviews = renderSurpresaPreviews;
+        // ══════════════════════════════════════════════════════
         // ══════════════════════════════════════════════════════
         window.bulkRemoveEmpreend = bulkRemoveEmpreend;
         window.bulkUpdateBar    = bulkUpdateBar;
@@ -8804,5 +9025,19 @@ Essa ação não pode ser desfeita.`)) return;
         window._hubQueue = [];
 
     </script>
+
+    <!-- ══ MODAL SURPRESA SEMANAL ══ -->
+    <div id="surpresa-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
+        <div style="position:relative;max-width:88vw;max-height:78vh;">
+            <img id="surpresa-img" src="" alt="" style="max-height:74vh;max-width:88vw;border-radius:16px;box-shadow:0 32px 80px rgba(0,0,0,0.6);object-fit:contain;">
+            <button id="surpresa-prev" onclick="surpresaSlide(-1)" style="display:none;position:absolute;left:-52px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:22px;cursor:pointer;backdrop-filter:blur(4px);">‹</button>
+            <button id="surpresa-next" onclick="surpresaSlide(1)" style="display:none;position:absolute;right:-52px;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.15);border:none;color:#fff;width:40px;height:40px;border-radius:50%;font-size:22px;cursor:pointer;backdrop-filter:blur(4px);">›</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:16px;">
+            <div id="surpresa-dots" style="display:flex;gap:8px;"></div>
+            <button onclick="surpresaClose()" style="background:#fff;color:#111;border:none;border-radius:10px;padding:10px 36px;font-size:13px;font-weight:900;cursor:pointer;font-family:'N27',sans-serif;letter-spacing:0.08em;text-transform:uppercase;">✕ Fechar</button>
+        </div>
+    </div>
+
 </body>
 </html>
