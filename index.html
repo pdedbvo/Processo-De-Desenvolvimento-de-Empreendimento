@@ -559,6 +559,7 @@
                 // Garante que conteúdo interno está escondido
                 document.getElementById('tab-content-analise').classList.add('hidden');
                 document.getElementById('tab-content-lista').classList.add('hidden');
+                document.getElementById('tab-content-saude').classList.add('hidden');
                 document.getElementById('custom-tables-section').classList.add('hidden');
                 // Atualiza logo do HUB (preta/branca conforme tema) e dados
                 updateHubLogo();
@@ -717,7 +718,7 @@
                 <!-- Você é — movido do header para o HUB -->
                 <div style="display:flex;align-items:center;gap:6px;border:1px solid var(--hub-btn-border);border-radius:8px;padding:6px 12px;background:transparent;">
                     <span style="font-size:9px;font-weight:700;color:var(--hub-text-muted);text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap;">Você é:</span>
-                    <select id="currentUserSelect" onchange="window._currentUserName = this.options[this.selectedIndex].text; localStorage.setItem('pde_user', this.value)" style="font-size:11px;font-weight:700;color:var(--hub-text-label);background:transparent;border:none;outline:none;cursor:pointer;font-family:'N27',sans-serif;min-width:100px;">
+                    <select id="currentUserSelect" onchange="window._currentUserName = this.options[this.selectedIndex].text; localStorage.setItem('pde_user', this.value); if(window._activePDE && typeof showOverdueModal==='function') setTimeout(showOverdueModal,300);" style="font-size:11px;font-weight:700;color:var(--hub-text-label);background:transparent;border:none;outline:none;cursor:pointer;font-family:'N27',sans-serif;min-width:100px;">
                         <option value="">— selecione —</option>
                     </select>
                 </div>
@@ -946,6 +947,7 @@
                 <button onclick="switchTab('lista')" id="btn-tab-lista" class="pb-2 tab-inactive">Atividades</button>
                 <button onclick="switchTab('canvas')" id="btn-tab-canvas" class="pb-2 tab-inactive" style="white-space:nowrap;">🔗 Canvas</button>
                 <button onclick="switchTab('gantt')" id="btn-tab-gantt" class="pb-2 tab-inactive" style="white-space:nowrap;">📅 Gantt</button>
+                <button onclick="switchTab('saude')" id="btn-tab-saude" class="pb-2 tab-inactive" style="white-space:nowrap;">🏥 Saúde dos Dados</button>
             </nav>
 
             <!-- Direita: badge + controles -->
@@ -1079,6 +1081,46 @@
 
     <main class="max-w-[1920px] mx-auto p-6">
         
+
+        <!-- ══ ABA SAÚDE DOS DADOS ══ -->
+        <section id="tab-content-saude" class="hidden space-y-6">
+
+            <!-- Cabeçalho -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 style="font-family:'N27',sans-serif;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#1e293b;">🏥 Saúde dos Dados</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">Monitoramento de atualização dos cards por time. Prazo semanal: toda sexta-feira.</p>
+                </div>
+                <button onclick="renderTeamHealth()" style="background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:10px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer;">↻ Atualizar</button>
+            </div>
+
+            <!-- Painel de resumo geral -->
+            <div id="saude-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;"></div>
+
+            <!-- Saúde por time -->
+            <div class="card overflow-hidden" id="teamHealthCard">
+                <div class="p-4 border-b border-slate-100">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">📊 Por Time</h3>
+                    <p class="text-[9px] text-slate-400 mt-0.5">Cards sem atualização desde a última sexta. Clique no time para expandir.</p>
+                </div>
+                <div class="p-4" id="teamHealthContainer">
+                    <div class="text-center text-slate-400 text-xs py-4">Clique em "Atualizar" para carregar.</div>
+                </div>
+            </div>
+
+            <!-- Lista completa dos desatualizados -->
+            <div class="card overflow-hidden">
+                <div class="p-4 border-b border-slate-100">
+                    <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">📋 Todos os Cards Desatualizados</h3>
+                    <p class="text-[9px] text-slate-400 mt-0.5">Listagem completa independente do time.</p>
+                </div>
+                <div class="p-4" id="saudeAllOutdatedContainer">
+                    <div class="text-center text-slate-400 text-xs py-4">Clique em "Atualizar" para carregar.</div>
+                </div>
+            </div>
+
+        </section>
+
         <section id="tab-content-lista" class="hidden space-y-6">
 
             <!-- Barra de ferramentas: Modelo / Importar / Exportar -->
@@ -1128,9 +1170,9 @@
                         </div>
                     </div>
 
-                    <!-- Filtro Responsável multi-select -->
+                    <!-- Filtro Time multi-select -->
                     <div class="flex flex-col">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Responsável</label>
+                        <label class="text-[9px] font-bold text-slate-400 uppercase mb-1">Time</label>
                         <div class="relative">
                             <button id="btnOwnerFilter" onclick="toggleDropdown('ownerFilterDropdown')"
                                 class="flex items-center gap-2 text-xs px-3 py-2 border rounded-md bg-white min-w-[150px] font-bold text-slate-700 hover:bg-slate-50 outline-none">
@@ -1215,7 +1257,7 @@
                 </div>
                 <!-- Alterar responsável -->
                 <div style="display:flex;align-items:center;gap:6px;">
-                    <span style="font-size:10px;color:#888;font-weight:700;">Responsável:</span>
+                    <span style="font-size:10px;color:#888;font-weight:700;">Time:</span>
                     <select id="bulk-owner-sel" style="font-size:10px;font-weight:700;background:#1a1a1a;border:1px solid #444;color:#ccc;padding:4px 8px;border-radius:6px;outline:none;cursor:pointer;font-family:'N27',sans-serif;">
                         <option value="">— escolha —</option>
                     </select>
@@ -1258,7 +1300,7 @@
                                 <th class="py-3 px-2" style="width:24px;"></th>
                                 <th class="py-3 px-3 sortable-th" style="width:120px;" onclick="setSortColumn('project')">Empreendimento<span class="sort-icon"></span><div class="col-resizer"></div></th>
                                 <th class="py-3 px-3 sortable-th" style="width:300px;" onclick="setSortColumn('title')">Atividade & Histórico<span class="sort-icon"></span><div class="col-resizer"></div></th>
-                                <th class="py-3 px-3 sortable-th" style="width:110px;" onclick="setSortColumn('owner')">Responsável<span class="sort-icon"></span><div class="col-resizer"></div></th>
+                                <th class="py-3 px-3 sortable-th" style="width:110px;" onclick="setSortColumn('owner')">Time<span class="sort-icon"></span><div class="col-resizer"></div></th>
                                 <th class="py-3 px-3 text-rose-500" style="width:140px;">Problemas<div class="col-resizer"></div></th>
                                 <th class="py-3 px-3 text-slate-600" style="width:140px;">Próximos Passos<div class="col-resizer"></div></th>
                                 <th class="py-3 px-3 sortable-th" style="width:90px;" onclick="setSortColumn('deadline')">Prazo Atual<span class="sort-icon"></span><div class="col-resizer"></div></th>
@@ -1420,7 +1462,7 @@
             <div class="card overflow-hidden">
                 <div class="p-4 border-b border-slate-100 flex items-center justify-between gap-3">
                     <div>
-                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">👤 Carga por Responsável</h3>
+                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">👥 Carga por Time</h3>
                         <p class="text-[9px] text-slate-400 mt-0.5">Atividades em aberto por pessoa. Exclui concluídas.</p>
                     </div>
                     <div class="flex items-center gap-2">
@@ -1435,6 +1477,7 @@
                 </div>
             </div>
 
+            <!-- SAÚDE DAS ATUALIZAÇÕES POR TIME -->
             <!-- GANTT LEVE -->
             <div class="card overflow-hidden">
                 <div class="p-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
@@ -1792,7 +1835,7 @@
                         <tr>
                             <th class="py-3 px-4">Nome</th>
                             <th class="py-3 px-4">E-mail</th>
-                            <th class="py-3 px-4">Setor</th>
+                            <th class="py-3 px-4">Time</th>
                             <th class="py-3 px-4 text-right">Ação</th>
                         </tr>
                     </thead>
@@ -1862,6 +1905,39 @@
                     <button onclick="surpresaRemove(2)" style="width:100%;padding:5px;background:#fff;border:1px solid #fca5a5;border-radius:6px;font-size:10px;font-weight:700;color:#dc2626;cursor:pointer;">✕ Remover</button>
                 </div>
             </div>
+        </div>
+
+        <!-- Migração de Times em Lote -->
+        <div class="card p-6">
+            <div class="mb-4">
+                <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">🔄 Alterar Time dos Cards em Lote</h2>
+                <p class="text-[10px] text-slate-400 mt-1">Altera o campo "Time" dos cards <strong>sem afetar a data de última atualização</strong>. Use para migração de times sem resetar o histórico.</p>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;">
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">PDE</label>
+                    <select id="bulkSectorPde" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;outline:none;background:#f8fafc;color:#1e293b;">
+                        <option value="all">Todos os PDEs</option>
+                        <option value="prelancamento">Pré-lançamento</option>
+                        <option value="desenvolvimento">Desenvolvimento</option>
+                        <option value="entrega">Entrega e Implantação</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Time atual (de)</label>
+                    <select id="bulkSectorFrom" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;outline:none;background:#f8fafc;color:#1e293b;">
+                        <option value="">Todos os times</option>
+                    </select>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px;">
+                    <label style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">Novo time (para)</label>
+                    <select id="bulkSectorTo" style="font-size:11px;font-weight:700;border:1px solid #e2e8f0;border-radius:6px;padding:6px 10px;outline:none;background:#f8fafc;color:#1e293b;">
+                        <option value="">Selecione...</option>
+                    </select>
+                </div>
+                <button onclick="bulkMigrateSector()" style="padding:8px 20px;background:#111;border:none;border-radius:8px;font-size:11px;font-weight:700;color:#fff;cursor:pointer;font-family:'N27',sans-serif;letter-spacing:.06em;">Aplicar sem alterar data</button>
+            </div>
+            <div id="bulkSectorResult" style="margin-top:10px;font-size:11px;color:#64748b;"></div>
         </div>
 
         <!-- Zona de Perigo -->
@@ -2034,7 +2110,7 @@
                 </div>
             </div>
             <div class="p-5 bg-slate-50 border-t flex justify-end gap-3">
-                <button onclick="deleteConfig()" id="btnDeleteConfig" class="mr-auto text-rose-500 font-bold text-[10px] uppercase px-4 hidden">Excluir</button>
+                <button onclick="deleteConfigItem()" id="btnDeleteConfig" class="mr-auto text-rose-500 font-bold text-[10px] uppercase px-4 hidden">Excluir</button>
                 <button onclick="closeConfigModal()" class="px-4 py-2 text-slate-500 font-bold text-xs uppercase">Cancelar</button>
                 <button onclick="saveConfigItem()" style="background:#111111;" class="text-white px-8 py-2 rounded-lg font-black text-xs uppercase">Salvar</button>
             </div>
@@ -2059,8 +2135,11 @@
                     <input type="email" id="userEditEmail" class="w-full p-2 border rounded-md text-sm bg-slate-50" placeholder="joao@empresa.com.br">
                 </div>
                 <div>
-                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Setor / Cargo</label>
-                    <input type="text" id="userEditSector" class="w-full p-2 border rounded-md text-sm bg-slate-50" placeholder="Ex: Engenharia">
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Times * <span style="font-weight:400;color:#94a3b8;">(pode selecionar mais de um)</span></label>
+                    <div id="userEditSectorList" style="border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;max-height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+                        <span style="font-size:10px;color:#94a3b8;">Carregando times...</span>
+                    </div>
+                    <input type="hidden" id="userEditSector">
                 </div>
             </div>
             <div class="p-6 bg-slate-50 border-t flex justify-end gap-3">
@@ -2071,7 +2150,7 @@
         </div>
     </div>
 
-    <div id="taskModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 z-50 backdrop-blur-sm">
+    <div id="taskModal" class="fixed inset-0 bg-slate-900/80 hidden items-center justify-center p-4 backdrop-blur-sm" style="z-index:9999;">
         <div class="bg-white rounded-2xl max-w-4xl w-full shadow-2xl overflow-hidden">
             <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                 <h2 id="modalTitle" class="text-lg font-black uppercase text-slate-900">Atividade</h2>
@@ -2106,15 +2185,10 @@
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Responsável(eis)</label>
-                    <div class="relative">
-                        <div id="ownerTagsContainer" onclick="document.getElementById('ownerInput').focus()">
-                            <!-- tags injetadas aqui -->
-                            <input type="text" id="ownerInput" placeholder="Digite ou selecione..." autocomplete="off"
-                                oninput="filterOwnerDropdown()" onfocus="showOwnerDropdown()" onkeydown="ownerInputKeydown(event)">
-                        </div>
-                        <div id="ownerDropdown" class="hidden"></div>
-                    </div>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Time Responsável</label>
+                    <select id="editOwnerSector" class="w-full p-2 border rounded-md text-xs bg-slate-50 font-bold">
+                        <option value="">Selecione o time...</option>
+                    </select>
                     <input type="hidden" id="editOwner">
                 </div>
                 <div>
@@ -2459,6 +2533,7 @@
 
             document.getElementById('tab-content-lista').classList.toggle('hidden', tab !== 'lista');
             document.getElementById('tab-content-analise').classList.toggle('hidden', tab !== 'analise');
+            document.getElementById('tab-content-saude').classList.toggle('hidden', tab !== 'saude');
             document.getElementById('tab-content-usuarios').classList.add('hidden'); // configs só no HUB
             document.getElementById('custom-tables-section').classList.toggle('hidden', tab !== 'lista');
             const canvasEl = document.getElementById('tab-content-canvas');
@@ -2497,8 +2572,11 @@
             document.getElementById('btn-tab-analise').className = tab === 'analise' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
             document.getElementById('btn-tab-canvas').className = tab === 'canvas' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
             document.getElementById('btn-tab-gantt').className = tab === 'gantt' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
+            const btnSaude = document.getElementById('btn-tab-saude');
+            if (btnSaude) btnSaude.className = tab === 'saude' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
             if (tab !== 'canvas' && tab !== 'gantt') updateAtrasoBadge();
             if (tab === 'analise') { updateCharts(); renderGantt(); renderOwnerChart(); }
+            if (tab === 'saude') { renderTeamHealth(); renderAllOutdated(); }
         }
 
         // ══════════════════════════════════════════════════════
@@ -2516,6 +2594,7 @@
             // Esconde todo conteúdo interno
             document.getElementById('tab-content-analise').classList.add('hidden');
             document.getElementById('tab-content-lista').classList.add('hidden');
+            document.getElementById('tab-content-saude').classList.add('hidden');
             document.getElementById('custom-tables-section').classList.add('hidden');
             document.getElementById('tab-content-canvas').style.display = 'none';
             const ganttFull = document.getElementById('tab-content-gantt-full');
@@ -2555,6 +2634,8 @@
             document.getElementById('hub-overlay').style.display = 'none';
             // Mostra surpresa se ainda não foi exibida nesta sessão
             setTimeout(() => { if (typeof surpresaMaybeShow === 'function') surpresaMaybeShow(); }, 400);
+            // Modal unificado: vencidas + desatualizadas
+            setTimeout(() => { if (typeof showAlertasModal === 'function') showAlertasModal(); }, 1200);
 
             // Mostra badge no header
             const meta = PDE_META[pde] || {};
@@ -2611,6 +2692,24 @@
             document.getElementById('hub-configs-modal').style.display = 'flex';
             // Renderiza previews das imagens surpresa salvas
             setTimeout(() => { if (typeof renderSurpresaPreviews === 'function') renderSurpresaPreviews(); }, 100);
+            // Popula dropdowns de migração de time
+            setTimeout(() => {
+                const setores = ((window.configs && window.configs.setores) || []).map(s => s.name).filter(Boolean);
+                const fromSel = document.getElementById('bulkSectorFrom');
+                const toSel   = document.getElementById('bulkSectorTo');
+                if (fromSel) {
+                    const fromCur = fromSel.value;
+                    // Coleta times únicos que existem nos cards
+                    const usedSectors = [...new Set((window.tasks || []).map(t => t.sector || '').filter(Boolean))].sort();
+                    fromSel.innerHTML = '<option value="">Todos os times</option>' +
+                        usedSectors.map(s => `<option value="${s}">${s}</option>`).join('');
+                    if (fromCur) fromSel.value = fromCur;
+                }
+                if (toSel) {
+                    toSel.innerHTML = '<option value="">Selecione o novo time...</option>' +
+                        setores.map(s => `<option value="${s}">${s}</option>`).join('');
+                }
+            }, 150);
         }
 
         function _closeHubConfigs() {
@@ -3376,7 +3475,7 @@
                 const mP = projF.has('all') || taskProjArr.some(p => projF.has(p));
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
-                const mO = ownerF.has('all') || taskOwners.some(o => ownerF.has(o));
+                const mO = ownerF.has('all') || ownerF.has(t.sector || '') || taskOwners.some(o => ownerF.has(o));
                 const atualF = window.activeAtualFilter || 'all';
                 const mA = atualF === 'all' || (t.atualizacao || 'houve') === atualF;
                 const mSearch = !search
@@ -3402,6 +3501,9 @@
                     ? `<span class="ml-1 text-[9px] font-black text-white bg-red-600 px-1.5 py-0.5 rounded">+${diasAtraso}d atraso</span>` : '';
                 const criticalBadge = t.criticalPath ? `<span class="critical-badge">⚡ Crítico</span>` : '';
                 const urgenteBadge  = t.urgente ? `<span class="urgente-badge">🚨 URGENTE</span>` : '';
+                const outdatedBadge = isTaskOutdated(t)
+                    ? `<span style="display:inline-flex;align-items:center;gap:2px;background:#fff7ed;border:1px solid #fed7aa;border-radius:4px;padding:1px 5px;font-size:8px;font-weight:700;color:#ea580c;margin-left:3px;" title="Sem atualização desde a última sexta-feira">⚠️ ${daysSinceUpdate(t) > 998 ? 'nunca' : daysSinceUpdate(t) + 'd'}</span>`
+                    : '';
 
                 // Destaque de busca
                 const titleHl    = search ? highlightSearch(t.title, search) : (t.title || '');
@@ -3431,14 +3533,13 @@
                     </td>
                     <td class="py-3 px-3 align-top uppercase" style="overflow:hidden;">
                         ${projectCellHtml}
-                        <div class="sector-badge text-[9px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-sm inline-block mt-1">${sectorHl}</div>
-                    </td>
+                                    </td>
                     <td class="py-3 px-3 align-top" style="overflow:hidden;">
-                        <div class="font-bold text-slate-800 leading-tight">${titleHl}${atrasoTag}${criticalBadge}${urgenteBadge}</div>
+                        <div class="font-bold text-slate-800 leading-tight">${titleHl}${atrasoTag}${criticalBadge}${urgenteBadge}${outdatedBadge}</div>
                         ${t.updatedBy && t.updatedAt ? `<div class="text-[9px] text-slate-300 mt-0.5">✎ ${t.updatedBy} · ${new Date(t.updatedAt).toLocaleDateString('pt-BR')}</div>` : ''}
                         ${renderHistoryInTable(t.notes, t.id, t.title, Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner || ''), t.deadline || '')}
                     </td>
-                    <td class="py-3 px-3 align-top font-semibold text-slate-600" style="overflow:hidden;">${ownersHl}</td>
+                    <td class="py-3 px-3 align-top font-semibold text-slate-600" style="overflow:hidden;">${sectorHl === '-' ? '-' : sectorHl}</td>
                     <td class="py-3 px-3 align-top text-rose-600 text-[10px] italic" style="overflow:hidden;">${t.problems || '-'}</td>
                     <td class="py-3 px-3 align-top text-slate-700 text-[10px] font-medium" style="overflow:hidden;">${t.nextSteps || '-'}</td>
                     <td class="py-3 px-3 align-top font-bold text-slate-900" style="overflow:hidden;">
@@ -3495,6 +3596,9 @@
             const projects = Array.isArray(t.projects) ? t.projects : (t.project ? [t.project] : []);
             setSelectedProjects(projects);
             document.getElementById('editSector').value = t.sector || '';
+            // Time responsável — usa sector da task
+            const ownerSectorSel = document.getElementById('editOwnerSector');
+            if (ownerSectorSel) ownerSectorSel.value = t.sector || '';
             document.getElementById('editTitle').value = t.title;
             document.getElementById('editStatus').value = t.status;
             document.getElementById('editStart').value = t.start || '';
@@ -3560,6 +3664,8 @@
             document.getElementById('editIdx').value = crypto.randomUUID();
             setSelectedProjects([]);
             document.getElementById('editSector').value = '';
+            const ownerSectorSelNew = document.getElementById('editOwnerSector');
+            if (ownerSectorSelNew) ownerSectorSelNew.value = '';
             document.getElementById('editTitle').value = '';
             document.getElementById('editStatus').value = 'andamento';
             document.getElementById('editStart').value = TODAY_ISO;
@@ -3582,7 +3688,12 @@
             document.getElementById('taskModal').classList.replace('hidden', 'flex');
         }
 
-        function closeModal() { document.getElementById('taskModal').classList.replace('flex', 'hidden'); }
+        function closeModal() {
+            document.getElementById('taskModal').classList.replace('flex', 'hidden');
+            // Se estava reprogramando via popup de vencidas mas cancelou, limpa o id
+            // (popup continua aberto — não burla o sistema)
+            window._overdueReprogramarId = null;
+        }
 
         async function deleteTask() {
             const id = document.getElementById('editIdx').value;
@@ -3653,15 +3764,19 @@
             btn.disabled = true;
             const selectedOwners = getSelectedOwners();
             const selProjects = getSelectedProjects();
+            // Time responsável: usa o dropdown de setor do modal
+            const selectedSector = (document.getElementById('editOwnerSector')?.value || document.getElementById('editSector').value || '').toUpperCase();
+            // Sincroniza editSector com o valor escolhido
+            if (document.getElementById('editSector')) document.getElementById('editSector').value = selectedSector;
 
             const payload = {
                 id: currentId,
                 project: selProjects[0] || '',
                 projects: selProjects,
-                sector: document.getElementById('editSector').value.toUpperCase(),
+                sector: selectedSector,
                 title: document.getElementById('editTitle').value,
-                owner: selectedOwners.join(', '),
-                owners: selectedOwners,
+                owner: selectedSector, // mantém owner como setor para compatibilidade
+                owners: selectedSector ? [selectedSector] : [],
                 status: finalStatus,
                 start: document.getElementById('editStart').value,
                 deadline: finalDeadline,
@@ -3680,14 +3795,56 @@
                 criticalPath: document.getElementById('editCriticalPath').checked,
                 urgente: document.getElementById('editUrgente').checked,
                 pde: window._activePDE || 'desenvolvimento',
-                updatedAt: Date.now(),
-                updatedBy: window._currentUserName || 'Sistema'
             };
+
+            // Só atualiza updatedAt se algo além do time (sector) mudou
+            const onlySectorChanged = currentTask.id && (() => {
+                const fields = ['title','status','start','deadline','progress','problems','nextSteps',
+                    'criticalPath','urgente','oldExpectations','notes'];
+                return fields.every(f => {
+                    const oldVal = String(currentTask[f] ?? '');
+                    const newVal = String(payload[f] ?? '');
+                    return oldVal === newVal;
+                }) && payload.sector !== (currentTask.sector || '');
+            })();
+
+            payload.updatedAt  = onlySectorChanged ? (currentTask.updatedAt || Date.now()) : Date.now();
+            payload.updatedBy  = onlySectorChanged ? (currentTask.updatedBy || window._currentUserName || 'Sistema') : (window._currentUserName || 'Sistema');
             try {
                 await window.saveToFirebase(payload);
                 btn.innerText = "Salvar Atividade";
                 btn.disabled = false;
                 closeModal();
+                // Se reprogramou uma vencida, verifica se o prazo realmente mudou para o futuro
+                if (window._overdueReprogramarId) {
+                    const rid = String(window._overdueReprogramarId);
+                    const newDeadline = payload.deadline;
+                    const today = TODAY_ISO;
+                    if (newDeadline && newDeadline > today) {
+                        // Prazo mudou para o futuro — marca como tratada
+                        _overdueHandled.add(rid);
+                        window._overdueReprogramarId = null;
+                        overdueCheckDone();
+                    } else {
+                        // Prazo não mudou ou ainda está vencido — mantém na lista
+                        window._overdueReprogramarId = null;
+                    }
+                    // Re-renderiza lista do overdue
+                    const pde = window._activePDE || 'desenvolvimento';
+                    const currentUser = window._currentUserName || '';
+                    const userRecord = (window.users || []).find(u => u.name === currentUser);
+                    const userTeams = Array.isArray(userRecord?.sectors) && userRecord.sectors.length
+                        ? userRecord.sectors : (userRecord?.sector ? [userRecord.sector] : []);
+                    const today2 = new Date(TODAY_ISO + 'T00:00:00');
+                    const allOverdue = (window.tasks || []).filter(t2 =>
+                        !t2.archived &&
+                        (t2.pde || 'desenvolvimento') === pde &&
+                        userTeams.includes(t2.sector || '') &&
+                        t2.status !== 'concluido' && t2.status !== 'concluido_atraso' &&
+                        t2.deadline && new Date(t2.deadline + 'T00:00:00') < today2
+                    );
+                    if (allOverdue.length > 0) overdueRenderList(allOverdue);
+                }
                 // Se duração mudou em atividade linkada, propaga sucessoras
                 if (linkedDurationChanged) {
                     const idx = (window.tasks||[]).findIndex(t => String(t.id) === String(currentId));
@@ -3800,7 +3957,7 @@
                         <tr class="hover:bg-slate-50 group">
                             <td class="py-2 px-3 font-bold text-slate-700 uppercase text-xs">${e.name}</td>
                             <td class="py-2 px-3 text-right">
-                                <button onclick="openConfigModal('empreendimento', '${e.id}')" class="opacity-0 group-hover:opacity-100 bg-slate-700 text-white px-3 py-1 rounded text-[9px] font-bold">EDITAR</button>
+                                <button onclick="openConfigModal('empreendimento', '${e.id}')" style="background:#1e293b;" class="text-white px-3 py-1 rounded text-[9px] font-bold hover:opacity-80">EDITAR</button>
                             </td>
                         </tr>`).join('');
             }
@@ -3813,7 +3970,7 @@
                         <tr class="hover:bg-slate-50 group">
                             <td class="py-2 px-3 font-bold text-slate-700 uppercase text-xs">${s.name}</td>
                             <td class="py-2 px-3 text-right">
-                                <button onclick="openConfigModal('setor', '${s.id}')" class="opacity-0 group-hover:opacity-100 bg-slate-700 text-white px-3 py-1 rounded text-[9px] font-bold">EDITAR</button>
+                                <button onclick="openConfigModal('setor', '${s.id}')" style="background:#1e293b;" class="text-white px-3 py-1 rounded text-[9px] font-bold hover:opacity-80">EDITAR</button>
                             </td>
                         </tr>`).join('');
             }
@@ -3828,7 +3985,8 @@
             if (id) {
                 const list = type === 'empreendimento' ? window.configs.empreendimentos : window.configs.setores;
                 const item = list.find(x => String(x.id) === String(id));
-                document.getElementById('configEditId').value = item ? item.id : '';
+                // Sempre guarda o ID original como string para deletar/salvar corretamente
+                document.getElementById('configEditId').value = item ? String(item.id) : String(id);
                 document.getElementById('configEditName').value = item ? item.name : '';
             } else {
                 document.getElementById('configEditId').value = crypto.randomUUID();
@@ -3844,20 +4002,27 @@
         async function saveConfigItem() {
             const name = document.getElementById('configEditName').value.trim().toUpperCase();
             if (!name) return alert('O nome é obrigatório.');
+            const rawId = document.getElementById('configEditId').value;
+            // Mantém o ID como string (UUID) — não converte para número
             await window.saveConfig({
-                id: parseInt(document.getElementById('configEditId').value),
+                id: rawId,
                 type: document.getElementById('configEditType').value,
                 name
             });
             closeConfigModal();
         }
 
-        async function deleteConfig() {
+        async function deleteConfigItem() {
             if (confirm('Excluir este item permanentemente?')) {
-                await window.deleteConfig(document.getElementById('configEditId').value);
-                closeConfigModal();
+                const rawId = document.getElementById('configEditId').value;
+                if (!rawId) return alert('ID não encontrado.');
+                try {
+                    await window.deleteConfig(rawId);
+                    closeConfigModal();
+                } catch(e) { alert('Erro ao excluir: ' + e.message); }
             }
         }
+        window.deleteConfigItem = deleteConfigItem;
         // ══════════════════════════════════════════════════════
 
         function renderUsersTable() {
@@ -3866,12 +4031,12 @@
             tbody.innerHTML = '';
             (window.users || []).forEach(u => {
                 tbody.innerHTML += `
-                    <tr class="hover:bg-slate-50 transition-all group">
+                    <tr class="hover:bg-slate-50 transition-all">
                         <td class="py-3 px-4 font-bold text-slate-800">${u.name}</td>
                         <td class="py-3 px-4 text-slate-500 text-xs">${u.email || '-'}</td>
-                        <td class="py-3 px-4 text-slate-400 text-xs">${u.sector || '-'}</td>
+                        <td class="py-3 px-4 text-slate-400 text-xs">${Array.isArray(u.sectors) && u.sectors.length ? u.sectors.join(', ') : (u.sector || '-')}</td>
                         <td class="py-3 px-4 text-right">
-                            <button onclick="openUserModal(${u.id})" class="opacity-0 group-hover:opacity-100 bg-slate-800 text-white px-3 py-1 rounded text-[10px] font-bold">EDITAR</button>
+                            <button onclick="openUserModal('${u.id}')" style="background:#1e293b;" class="text-white px-3 py-1 rounded text-[10px] font-bold hover:opacity-80">EDITAR</button>
                         </td>
                     </tr>`;
             });
@@ -3881,19 +4046,39 @@
         }
 
         function openUserModal(id) {
+            // Popula checkboxes de times com setores cadastrados
+            const listEl = document.getElementById('userEditSectorList');
+            const setores = ((window.configs && window.configs.setores) || []).map(s => s.name).filter(Boolean);
+            if (listEl) {
+                if (!setores.length) {
+                    listEl.innerHTML = '<span style="font-size:10px;color:#94a3b8;">Nenhum setor cadastrado ainda.</span>';
+                } else {
+                    listEl.innerHTML = setores.map(s =>
+                        `<label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:11px;font-weight:600;color:#1e293b;">
+                            <input type="checkbox" class="user-sector-cb" value="${s}" style="accent-color:#6366f1;width:14px;height:14px;cursor:pointer;"> ${s}
+                        </label>`
+                    ).join('');
+                }
+            }
+
             if (id) {
-                const u = window.users.find(x => x.id === id);
-                document.getElementById('userEditIdx').value = u.id;
+                const u = window.users.find(x => String(x.id) === String(id));
+                if (!u) { alert('Usuário não encontrado.'); return; }
+                document.getElementById('userEditIdx').value = String(u.id);
                 document.getElementById('userEditName').value = u.name;
                 document.getElementById('userEditEmail').value = u.email || '';
-                document.getElementById('userEditSector').value = u.sector || '';
+                // Suporta sectors (array novo) e sector (string antiga)
+                const userSectors = Array.isArray(u.sectors) && u.sectors.length ? u.sectors : (u.sector ? [u.sector] : []);
+                document.querySelectorAll('.user-sector-cb').forEach(cb => {
+                    cb.checked = userSectors.includes(cb.value);
+                });
                 document.getElementById('userModalTitle').innerText = 'Editar Usuário';
                 document.getElementById('btnDeleteUser').classList.remove('hidden');
             } else {
                 document.getElementById('userEditIdx').value = crypto.randomUUID();
                 document.getElementById('userEditName').value = '';
                 document.getElementById('userEditEmail').value = '';
-                document.getElementById('userEditSector').value = '';
+                document.querySelectorAll('.user-sector-cb').forEach(cb => { cb.checked = false; });
                 document.getElementById('userModalTitle').innerText = 'Novo Usuário';
                 document.getElementById('btnDeleteUser').classList.add('hidden');
             }
@@ -3907,10 +4092,11 @@
             const email = document.getElementById('userEditEmail').value.trim();
             if (!name) return alert('O nome é obrigatório.');
             await window.saveUserToFirebase({
-                id: parseInt(document.getElementById('userEditIdx').value),
+                id: document.getElementById('userEditIdx').value,
                 name,
                 email,
-                sector: document.getElementById('userEditSector').value.trim()
+                sectors: [...document.querySelectorAll('.user-sector-cb:checked')].map(cb => cb.value),
+                sector: [...document.querySelectorAll('.user-sector-cb:checked')].map(cb => cb.value).join(', ') // compatibilidade
             });
             closeUserModal();
         }
@@ -3934,7 +4120,7 @@
                 const mP = projF.has('all') || projF.has(t.project);
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
-                const mO = ownerF.has('all') || taskOwners.some(o => ownerF.has(o));
+                const mO = ownerF.has('all') || ownerF.has(t.sector || '') || taskOwners.some(o => ownerF.has(o));
                 const mSearch = !search
                     || (t.title||'').toLowerCase().includes(search)
                     || (t.owner||'').toLowerCase().includes(search)
@@ -4609,6 +4795,17 @@
                     <button onclick="exportCustomTableExcel('${t.id}')" title="Baixar em Excel" style="background:#1d6f42;" class="hover:opacity-80 text-white px-3 py-1 rounded text-[10px] font-bold">⬇ Excel</button>
                     <button onclick="exportCustomTablePDF('${t.id}')" title="Baixar em PDF" style="background:#111111;" class="hover:opacity-80 text-white px-3 py-1 rounded text-[10px] font-bold">⬇ PDF</button>
                     <button onclick="openTableModal('${t.id}')" class="bg-slate-100 hover:bg-slate-200 text-slate-600 px-3 py-1 rounded text-[10px] font-bold">⚙ Configurar</button>
+                    <div class="relative inline-block">
+                        <select onchange="moveCustomTable('${t.id}', this.value); this.value='';"
+                            style="font-size:10px;font-weight:700;padding:4px 8px;border:1px solid #e2e8f0;border-radius:6px;background:#f8fafc;color:#475569;cursor:pointer;outline:none;"
+                            title="Mover para outro PDE">
+                            <option value="">→ Mover para...</option>
+                            ${['prelancamento','desenvolvimento','entrega'].filter(p => p !== (t.pde||'desenvolvimento')).map(p => {
+                                const lbl = {prelancamento:'Pré-lançamento', desenvolvimento:'Desenvolvimento', entrega:'Entrega e Implantação'};
+                                return `<option value="${p}">${lbl[p]}</option>`;
+                            }).join('')}
+                        </select>
+                    </div>
                 </div>`;
             wrap.appendChild(hdr);
 
@@ -4942,6 +5139,444 @@
             await window.saveCustomTable(t);
         }
 
+        // ── Mover tabela para outro PDE ──────────────────────────────
+        async function moveCustomTable(tableId, targetPde) {
+            if (!targetPde) return;
+            const pdeLabels = { prelancamento: 'Pré-lançamento', desenvolvimento: 'Desenvolvimento', entrega: 'Entrega e Implantação' };
+            const t = window.customTables.find(x => String(x.id) === String(tableId));
+            if (!t) return;
+            if (!confirm(`Mover tabela "${t.name}" para ${pdeLabels[targetPde]}?`)) return;
+            try {
+                await window.saveCustomTable({ ...t, pde: targetPde });
+            } catch(e) { alert('Erro ao mover tabela: ' + e.message); }
+        }
+        window.moveCustomTable = moveCustomTable;
+
+        // ── Migração de time em lote SEM afetar updatedAt ─────────────
+        async function bulkMigrateSector() {
+            const pdeFilter  = document.getElementById('bulkSectorPde')?.value || 'all';
+            const fromSector = document.getElementById('bulkSectorFrom')?.value || '';
+            const toSector   = document.getElementById('bulkSectorTo')?.value || '';
+            const resultEl   = document.getElementById('bulkSectorResult');
+
+            if (!toSector) { alert('Selecione o novo time de destino.'); return; }
+
+            const tasks = (window.tasks || []).filter(t => {
+                if (t.archived) return false;
+                if (pdeFilter !== 'all' && (t.pde || 'desenvolvimento') !== pdeFilter) return false;
+                if (fromSector && (t.sector || '') !== fromSector) return false;
+                return true;
+            });
+
+            if (!tasks.length) { if (resultEl) resultEl.textContent = 'Nenhuma atividade encontrada com esses filtros.'; return; }
+
+            const from = fromSector || 'todos os times';
+            if (!confirm(`Alterar time de ${tasks.length} atividade(s) de "${from}" para "${toSector}"?\n\nA data de última atualização NÃO será alterada.`)) return;
+
+            if (resultEl) resultEl.textContent = `Migrando ${tasks.length} atividades...`;
+
+            try {
+                await Promise.all(tasks.map(t =>
+                    window.saveToFirebase({
+                        ...t,
+                        sector: toSector,
+                        owner: toSector,
+                        owners: [toSector],
+                        // updatedAt e updatedBy preservados do original
+                        updatedAt: t.updatedAt || Date.now(),
+                        updatedBy: t.updatedBy || window._currentUserName || 'Sistema',
+                    })
+                ));
+                if (resultEl) resultEl.innerHTML = `<span style="color:#10b981;font-weight:700;">✓ ${tasks.length} atividades migradas para "${toSector}" sem alterar datas.</span>`;
+            } catch(e) {
+                if (resultEl) resultEl.innerHTML = `<span style="color:#ef4444;">Erro: ${e.message}</span>`;
+            }
+        }
+        window.bulkMigrateSector = bulkMigrateSector;
+
+        // ══════════════════════════════════════════════════════
+        // SAÚDE DAS ATUALIZAÇÕES — prazo toda sexta-feira
+        // ══════════════════════════════════════════════════════
+
+        // Retorna a data da última sexta-feira (ou hoje se for sexta)
+        function getLastFriday() {
+            const today = new Date(TODAY_ISO + 'T00:00:00');
+            const day = today.getDay(); // 0=dom, 5=sex
+            const daysBack = day === 5 ? 0 : day === 6 ? 1 : day + 2; // sexta=0, sab=1, dom=2, seg=3, ter=4, qua=5, qui=6
+            // Calcula corretamente: quantos dias voltar para chegar na última sexta
+            const daysToFriday = ((day - 5) + 7) % 7;
+            const lastFriday = new Date(today);
+            lastFriday.setDate(today.getDate() - daysToFriday);
+            return lastFriday;
+        }
+
+        // Retorna true se o card está desatualizado (não atualizado desde a última sexta)
+        function isTaskOutdated(t) {
+            if (t.archived) return false;
+            const done = t.status === 'concluido' || t.status === 'concluido_atraso';
+            if (done) return false;
+            if (!t.updatedAt) return true;
+            const lastFriday = getLastFriday();
+            const updatedDate = new Date(t.updatedAt);
+            return updatedDate < lastFriday;
+        }
+
+        // Dias desde a última atualização
+        function daysSinceUpdate(t) {
+            if (!t.updatedAt) return 999;
+            const today = new Date(TODAY_ISO + 'T00:00:00');
+            return Math.floor((today - new Date(t.updatedAt)) / 86400000);
+        }
+
+        // ── Renderiza seção de saúde por time no Dashboard ───────────
+        function renderTeamHealth() {
+            const container = document.getElementById('teamHealthContainer');
+            if (!container) return;
+            const pde = window._activePDE || 'desenvolvimento';
+            const tasks = (window.tasks || []).filter(t =>
+                !t.archived && (t.pde || 'desenvolvimento') === pde
+            );
+            if (!tasks.length) {
+                container.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">Sem atividades neste PDE.</p>';
+                return;
+            }
+            // Agrupa por time (sector)
+            const teams = {};
+            tasks.forEach(t => {
+                const team = t.sector || '— Sem time —';
+                if (!teams[team]) teams[team] = { total: 0, outdated: [] };
+                teams[team].total++;
+                if (isTaskOutdated(t)) teams[team].outdated.push(t);
+            });
+            const sorted = Object.entries(teams).sort((a,b) => b[1].outdated.length - a[1].outdated.length);
+            container.innerHTML = sorted.map(([team, data]) => {
+                const pct = data.total > 0 ? Math.round((data.outdated.length / data.total) * 100) : 0;
+                const color = pct === 0 ? '#10b981' : pct < 50 ? '#f59e0b' : '#ef4444';
+                const badge = data.outdated.length > 0
+                    ? `<span style="background:${color}18;color:${color};border:1px solid ${color}44;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;">${data.outdated.length} desatualizado${data.outdated.length > 1 ? 's' : ''}</span>`
+                    : `<span style="background:#f0fdf4;color:#10b981;border:1px solid #a7f3d0;font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px;">✓ Em dia</span>`;
+                const outdatedList = data.outdated.length > 0
+                    ? `<div style="margin-top:8px;padding:8px 12px;background:#fff7ed;border-radius:6px;border:1px solid #fed7aa;">
+                        ${data.outdated.map(t => {
+                            const dias = daysSinceUpdate(t);
+                            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid #ffedd5;font-size:10px;">
+                                <span style="color:#1e293b;font-weight:600;">${t.title}</span>
+                                <span style="color:#ea580c;font-weight:700;white-space:nowrap;margin-left:8px;">${dias > 998 ? 'Nunca' : dias + 'd'}</span>
+                            </div>`;
+                        }).join('')}
+                      </div>` : '';
+                return `<div style="margin-bottom:12px;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#f8fafc;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'">
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <span style="font-size:11px;font-weight:700;color:#1e293b;">${team}</span>
+                            <span style="font-size:9px;color:#94a3b8;">${data.total} cards</span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            ${badge}
+                            <div style="width:80px;height:6px;background:#e2e8f0;border-radius:3px;overflow:hidden;">
+                                <div style="height:100%;width:${pct}%;background:${color};border-radius:3px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display:none;padding:${data.outdated.length?'0 14px 12px':'0'};">
+                        ${outdatedList || ''}
+                    </div>
+                </div>`;
+            }).join('');
+        }
+        window.renderTeamHealth = renderTeamHealth;
+
+        // ── Renderiza lista completa de desatualizados ────────────────
+        function renderAllOutdated() {
+            const container = document.getElementById('saudeAllOutdatedContainer');
+            if (!container) return;
+            const pde = window._activePDE || 'desenvolvimento';
+            const tasks = (window.tasks || []).filter(t =>
+                !t.archived && (t.pde || 'desenvolvimento') === pde && isTaskOutdated(t)
+            ).sort((a, b) => daysSinceUpdate(b) - daysSinceUpdate(a));
+
+            // Summary cards
+            const summaryEl = document.getElementById('saude-summary');
+            if (summaryEl) {
+                const total    = (window.tasks || []).filter(t => !t.archived && (t.pde||'desenvolvimento') === pde && t.status !== 'concluido' && t.status !== 'concluido_atraso').length;
+                const outdated = tasks.length;
+                const pct      = total > 0 ? Math.round((outdated / total) * 100) : 0;
+                const color    = pct === 0 ? '#10b981' : pct < 30 ? '#f59e0b' : '#ef4444';
+                summaryEl.innerHTML = `
+                    <div class="card p-5" style="border-top:3px solid ${color};">
+                        <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Cards ativos</div>
+                        <div style="font-size:28px;font-weight:900;color:#1e293b;font-family:'N27',sans-serif;">${total}</div>
+                    </div>
+                    <div class="card p-5" style="border-top:3px solid ${color};">
+                        <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">Desatualizados</div>
+                        <div style="font-size:28px;font-weight:900;color:${color};font-family:'N27',sans-serif;">${outdated}</div>
+                    </div>
+                    <div class="card p-5" style="border-top:3px solid ${color};">
+                        <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">% desatualizado</div>
+                        <div style="font-size:28px;font-weight:900;color:${color};font-family:'N27',sans-serif;">${pct}%</div>
+                    </div>`;
+            }
+
+            if (!tasks.length) {
+                container.innerHTML = '<p class="text-center text-green-600 font-bold text-sm py-6">✓ Todos os cards estão atualizados!</p>';
+                return;
+            }
+            container.innerHTML = `<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:10px;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead style="background:#f8fafc;position:sticky;top:0;">
+                        <tr>
+                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Atividade</th>
+                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Time</th>
+                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Empreendimento</th>
+                            <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Dias sem att.</th>
+                            <th style="padding:8px 12px;border-bottom:2px solid #e2e8f0;"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tasks.map((t, i) => {
+                            const dias = daysSinceUpdate(t);
+                            const bg   = i % 2 === 0 ? '#fff' : '#f8fafc';
+                            const proj = t.project || (Array.isArray(t.projects) && t.projects[0]) || '—';
+                            const col  = dias > 21 ? '#ef4444' : dias > 14 ? '#f59e0b' : '#ea580c';
+                            return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
+                                <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${t.title}</td>
+                                <td style="padding:8px 12px;color:#64748b;">${t.sector || '—'}</td>
+                                <td style="padding:8px 12px;color:#64748b;">${proj}</td>
+                                <td style="padding:8px 12px;font-weight:700;color:${col};">${dias > 998 ? 'Nunca' : dias + 'd'}</td>
+                                <td style="padding:8px 12px;">
+                                    <button onclick="editTask('${t.id}')" style="padding:3px 10px;border:1px solid #e2e8f0;background:#f8fafc;color:#475569;border-radius:5px;font-size:9px;font-weight:700;cursor:pointer;">Abrir</button>
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+            </div>`;
+        }
+        window.renderAllOutdated = renderAllOutdated;
+
+        // ── Checklist semanal ─────────────────────────────────────────
+        // ══════════════════════════════════════════════════════
+        // MODAL UNIFICADO — Vencidas + Desatualizadas
+        // ══════════════════════════════════════════════════════
+        let _overdueHandled = new Set();
+
+        function _getUserTeams() {
+            const currentUser = window._currentUserName || '';
+            const userRecord  = (window.users || []).find(u => u.name === currentUser);
+            return Array.isArray(userRecord?.sectors) && userRecord.sectors.length
+                ? userRecord.sectors
+                : (userRecord?.sector ? [userRecord.sector] : []);
+        }
+
+        // Entrada principal — chama após entrar no PDE ou trocar usuário
+        function showAlertasModal() {
+            const pde      = window._activePDE || 'desenvolvimento';
+            const userTeams = _getUserTeams();
+            if (!userTeams.length) return;
+
+            const today = new Date(TODAY_ISO + 'T00:00:00');
+
+            // Vencidas: prazo < hoje, não concluídas, não tratadas
+            const overdue = (window.tasks || []).filter(t =>
+                !t.archived &&
+                (t.pde || 'desenvolvimento') === pde &&
+                userTeams.includes(t.sector || '') &&
+                t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
+                t.deadline && new Date(t.deadline + 'T00:00:00') < today &&
+                !_overdueHandled.has(String(t.id))
+            );
+
+            // Desatualizadas: sem att desde a última sexta (não vencidas)
+            const outdated = (window.tasks || []).filter(t =>
+                !t.archived &&
+                (t.pde || 'desenvolvimento') === pde &&
+                userTeams.includes(t.sector || '') &&
+                isTaskOutdated(t) &&
+                !overdue.find(o => o.id === t.id) // evita duplicar vencidas
+            );
+
+            if (!overdue.length && !outdated.length) return;
+
+            const hasOverdue  = overdue.length > 0;
+            const hasOutdated = outdated.length > 0;
+
+            // Header
+            const headerEl = document.getElementById('alertas-header');
+            if (headerEl) {
+                const icon  = hasOverdue ? '🚨' : '⚠️';
+                const title = hasOverdue && hasOutdated ? 'Atividades Vencidas e Desatualizadas'
+                            : hasOverdue ? 'Atividades Vencidas — Ação Necessária'
+                            : 'Revisão Semanal Pendente';
+                const color = hasOverdue ? '#dc2626' : '#111';
+                const border = hasOverdue ? '4px solid #ef4444' : '4px solid #f59e0b';
+                headerEl.parentElement.style.borderTop = border;
+                headerEl.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:24px;">${icon}</span>
+                    <div>
+                        <h2 style="font-family:'N27',sans-serif;font-size:13px;font-weight:900;color:${color};text-transform:uppercase;letter-spacing:0.06em;">${title}</h2>
+                        <p style="font-size:11px;color:#94a3b8;margin-top:2px;">
+                            ${hasOverdue ? `${overdue.length} vencida${overdue.length>1?'s':''} no seu time` : ''}
+                            ${hasOverdue && hasOutdated ? ' · ' : ''}
+                            ${hasOutdated ? `${outdated.length} sem atualização` : ''}
+                        </p>
+                    </div>
+                </div>`;
+            }
+
+            // Body
+            alertasRenderBody(overdue, outdated, userTeams);
+
+            // Footer
+            const footerMsg = document.getElementById('alertas-footer-msg');
+            const btnClose  = document.getElementById('alertas-btn-close');
+            const btnUpdate = document.getElementById('alertas-btn-update');
+            if (footerMsg) footerMsg.textContent = hasOverdue ? 'Trate todas as atividades vencidas para poder fechar.' : '';
+            if (btnClose)  btnClose.style.display  = hasOverdue ? 'none' : 'inline-block';
+            if (btnUpdate) btnUpdate.style.display = hasOutdated ? 'inline-block' : 'none';
+
+            document.getElementById('alertas-modal').style.display = 'flex';
+        }
+
+        function alertasRenderBody(overdue, outdated, userTeams) {
+            const bodyEl = document.getElementById('alertas-body');
+            if (!bodyEl) return;
+            let html = '';
+
+            // Seção de vencidas (bloqueante)
+            if (overdue.length) {
+                html += `<div>
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#dc2626;margin-bottom:8px;">🚨 Vencidas — requerem ação</div>
+                    <div style="display:flex;flex-direction:column;gap:10px;">
+                        ${overdue.map(t => {
+                            const dias = t.deadline ? Math.floor((new Date(TODAY_ISO+'T00:00:00') - new Date(t.deadline+'T00:00:00')) / 86400000) : 0;
+                            return `<div id="overdue-card-${t.id}" style="border:1px solid #fecaca;border-radius:10px;padding:13px 15px;background:#fff7f7;">
+                                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                                    <div>
+                                        <div style="font-size:12px;font-weight:700;color:#1e293b;">${t.title}</div>
+                                        <div style="font-size:9px;color:#ef4444;font-weight:700;margin-top:2px;">⏰ Vencida há ${dias}d — prazo: ${t.deadline.split('-').reverse().join('/')}</div>
+                                    </div>
+                                </div>
+                                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                                    <button onclick="overdueReprogramar('${t.id}')" style="padding:5px 12px;background:#111;border:none;border-radius:7px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;font-family:'N27',sans-serif;">✏️ Reprogramar data</button>
+                                    <button onclick="overdueShowJustify('${t.id}')" style="padding:5px 12px;background:#fff;border:1.5px solid #e2e8f0;border-radius:7px;font-size:10px;font-weight:700;color:#64748b;cursor:pointer;">Não quero reprogramar</button>
+                                </div>
+                                <div id="overdue-justify-${t.id}" style="display:none;margin-top:10px;">
+                                    <textarea id="overdue-justify-text-${t.id}" placeholder="Justificativa obrigatória..." style="width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:8px;font-size:11px;resize:vertical;min-height:56px;outline:none;box-sizing:border-box;"></textarea>
+                                    <button onclick="overdueConfirmJustify('${t.id}')" style="margin-top:6px;padding:5px 14px;background:#f59e0b;border:none;border-radius:7px;font-size:10px;font-weight:700;color:#fff;cursor:pointer;font-family:'N27',sans-serif;">Confirmar justificativa</button>
+                                </div>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
+            // Seção de desatualizadas (não bloqueante)
+            if (outdated.length) {
+                html += `<div>
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#f59e0b;margin-bottom:8px;">⚠️ Sem atualização desde a última sexta</div>
+                    <div style="display:flex;flex-direction:column;gap:6px;">
+                        ${outdated.map(t => {
+                            const dias = daysSinceUpdate(t);
+                            const proj = t.project || (Array.isArray(t.projects) && t.projects[0]) || '';
+                            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;cursor:pointer;" onclick="editTask('${t.id}');alertasClose(true)">
+                                <div>
+                                    <div style="font-size:11px;font-weight:700;color:#1e293b;">${t.title}</div>
+                                    ${proj ? `<div style="font-size:9px;color:#94a3b8;">${proj}</div>` : ''}
+                                </div>
+                                <span style="font-size:10px;font-weight:700;color:#ea580c;white-space:nowrap;margin-left:10px;">${dias > 998 ? 'nunca' : dias+'d'}</span>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>`;
+            }
+
+            bodyEl.innerHTML = html;
+        }
+
+        function alertasClose(force) {
+            // Verifica se ainda tem vencidas não tratadas
+            const pde = window._activePDE || 'desenvolvimento';
+            const userTeams = _getUserTeams();
+            const today = new Date(TODAY_ISO + 'T00:00:00');
+            const remaining = (window.tasks || []).filter(t =>
+                !t.archived &&
+                (t.pde || 'desenvolvimento') === pde &&
+                userTeams.includes(t.sector || '') &&
+                t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
+                t.deadline && new Date(t.deadline + 'T00:00:00') < today &&
+                !_overdueHandled.has(String(t.id))
+            );
+            if (!force && remaining.length) {
+                // Bloqueado — tem vencidas não tratadas
+                const msg = document.getElementById('alertas-footer-msg');
+                if (msg) { msg.textContent = `⛔ Trate as ${remaining.length} atividade${remaining.length>1?'s':''} vencida${remaining.length>1?'s':''} para fechar.`; msg.style.color = '#ef4444'; }
+                return;
+            }
+            // Só tem desatualizadas: pede confirmação
+            if (!force && !remaining.length) {
+                const outdatedLeft = document.querySelectorAll('#alertas-body [style*="fffbeb"]').length;
+                if (outdatedLeft > 0) {
+                    if (!confirm(`Tem certeza? Você tem ${outdatedLeft} card${outdatedLeft>1?'s':''} sem atualização.`)) return;
+                }
+            }
+            document.getElementById('alertas-modal').style.display = 'none';
+        }
+
+        function overdueShowJustify(id) {
+            const el = document.getElementById(`overdue-justify-${id}`);
+            if (el) el.style.display = 'block';
+        }
+
+        function overdueReprogramar(id) {
+            window._overdueReprogramarId = id;
+            editTask(id);
+            // Modal fica aberto — card abre por cima (z-index 9999)
+        }
+
+        async function overdueConfirmJustify(id) {
+            const textEl = document.getElementById(`overdue-justify-text-${id}`);
+            const justif = textEl ? textEl.value.trim() : '';
+            if (!justif) { alert('A justificativa é obrigatória.'); return; }
+
+            const t = (window.tasks || []).find(x => String(x.id) === String(id));
+            if (!t) return;
+
+            let notes = [];
+            try { notes = JSON.parse(t.notes || '[]'); } catch(e) { notes = []; }
+            notes.push({ date: TODAY_ISO, text: `[Vencimento não reprogramado] ${justif}`, author: window._currentUserName || 'Sistema' });
+
+            await window.saveToFirebase({ ...t, notes: JSON.stringify(notes), updatedAt: t.updatedAt, updatedBy: t.updatedBy });
+            _overdueHandled.add(String(id));
+
+            // Re-abre modal atualizado
+            document.getElementById('alertas-modal').style.display = 'none';
+            setTimeout(showAlertasModal, 300);
+        }
+
+        function overdueCheckDone() { /* mantido por compatibilidade */ }
+
+        // Compatibilidade com chamadas antigas
+        function showWeeklyChecklist() { showAlertasModal(); }
+        function showOverdueModal()    { showAlertasModal(); }
+        function checklistClose(f)    { alertasClose(f); }
+        function checklistGoUpdate()  {
+            document.getElementById('alertas-modal').style.display = 'none';
+            if (typeof switchTab === 'function') switchTab('lista');
+        }
+
+        window.showAlertasModal     = showAlertasModal;
+        window.alertasClose         = alertasClose;
+        window.showWeeklyChecklist  = showWeeklyChecklist;
+        window.showOverdueModal     = showOverdueModal;
+        window.checklistClose       = checklistClose;
+        window.checklistGoUpdate    = checklistGoUpdate;
+        window.overdueShowJustify   = overdueShowJustify;
+        window.overdueReprogramar   = overdueReprogramar;
+        window.overdueConfirmJustify = overdueConfirmJustify;
+        window.overdueCheckDone     = overdueCheckDone;
+        // ══════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════
+
         async function addTableRow(tableId) {
             const t = window.customTables.find(x => String(x.id) === String(tableId));
             if (!t) return;
@@ -5255,11 +5890,13 @@
                 `<label><input type="checkbox" class="proj-cb" value="${p}" ${checkedProj.has(p)?'checked':''} onchange="onProjCbChange(this)"> ${p}</label>`
             ).join('');
 
-            // Atualiza dropdown de responsáveis com owners únicos do PDE ativo
+            // Atualiza dropdown de times (setores) do PDE ativo
             const ownerSet = new Set();
+            // Primeiro adiciona setores cadastrados nas configs
+            ((window.configs && window.configs.setores) || []).forEach(s => s.name && ownerSet.add(s.name));
+            // Também adiciona setores que estão nas tasks (por segurança)
             window.tasks.filter(t => (t.pde||'desenvolvimento') === activePDE_dd).forEach(t => {
-                if (Array.isArray(t.owners)) t.owners.forEach(o => o && ownerSet.add(o));
-                else if (t.owner) ownerSet.add(t.owner);
+                if (t.sector) ownerSet.add(t.sector);
             });
             const owners = [...ownerSet].sort((a,b) => a.localeCompare(b));
             const ownerContainer = document.getElementById('ownerCbList');
@@ -5290,6 +5927,17 @@
                 setorSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
             });
             if (curSetor) setorSel.value = curSetor;
+
+            // Popula também o dropdown de time responsável no modal
+            const ownerSectorSel = document.getElementById('editOwnerSector');
+            if (ownerSectorSel) {
+                const curOwnerSector = ownerSectorSel.value;
+                ownerSectorSel.innerHTML = '<option value="">Selecione o time...</option>';
+                cfg.setores.forEach(s => {
+                    ownerSectorSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
+                });
+                if (curOwnerSector) ownerSectorSel.value = curOwnerSector;
+            }
         }
 
         // ══════════════════════════════════════════════════════
@@ -8330,7 +8978,7 @@
                 i+1, t.title||'',
                 t.project||(Array.isArray(t.projects)?t.projects[0]:'')||'',
                 t.sector||'',
-                Array.isArray(t.owners)?t.owners.join(', '):(t.owner||''),
+                t.sector||'',
                 t.status||'pendente', t.urgente?'urgente':'normal',
                 t.start?t.start.split('-').reverse().join('/'):'',
                 t.deadline?t.deadline.split('-').reverse().join('/'):'',
@@ -8390,7 +9038,7 @@
                             titulo: getCol(row,'titulo'),
                             empreendimento: getCol(row,'empreendimento'),
                             setor: getCol(row,'setor').toUpperCase(),
-                            responsaveis: getCol(row,'responsaveis'),
+                            responsaveis: getCol(row,'responsaveis'), // mapeia para sector
                             status: getCol(row,'status')||'pendente',
                             prioridade: getCol(row,'prioridade')||'normal',
                             inicio: parseDateBR(getCol(row,'inicio')),
@@ -8465,7 +9113,7 @@
                     const proj=r.empreendimento||'';
                     await window.saveToFirebase({
                         id:fid, title:r.titulo, project:proj, projects:proj?[proj]:[],
-                        sector:r.setor, owner:owners.join(', '), owners,
+                        sector:(r.responsaveis||r.setor||'').toUpperCase(), owner:owners.join(', '), owners,
                         status:r.status, urgente:r.prioridade==='urgente',
                         start:r.inicio||null, deadline:r.prazo||null,
                         linkedStart:null, linkedDeadline:null,
@@ -9010,7 +9658,7 @@ Essa ação não pode ser desfeita.`)) return;
         window.openConfigModal  = openConfigModal;
         window.closeConfigModal = closeConfigModal;
         window.saveConfigItem   = saveConfigItem;
-        window.deleteConfig     = window.deleteConfig; // já exposto via Firebase
+        window.deleteConfigItem = function()     { _hubCall('deleteConfigItem', []); };
         window.openUserModal    = openUserModal;
         window.closeUserModal   = closeUserModal;
         window.saveUser         = saveUser;
@@ -9025,6 +9673,25 @@ Essa ação não pode ser desfeita.`)) return;
         window._hubQueue = [];
 
     </script>
+
+    <!-- ══ MODAL VENCIDAS BLOQUEANTE ══ -->
+    <!-- ══ MODAL UNIFICADO: VENCIDAS + DESATUALIZADAS ══ -->
+    <div id="alertas-modal" style="display:none;position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:20px;">
+        <div style="background:#fff;border-radius:16px;width:100%;max-width:660px;max-height:88vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 32px 80px rgba(0,0,0,0.4);">
+            <!-- Header dinâmico -->
+            <div id="alertas-header" style="padding:20px 24px;border-bottom:1px solid #e2e8f0;flex-shrink:0;"></div>
+            <!-- Corpo com seções -->
+            <div id="alertas-body" style="flex:1;overflow-y:auto;padding:16px 24px;display:flex;flex-direction:column;gap:16px;"></div>
+            <!-- Footer -->
+            <div style="padding:14px 24px;border-top:1px solid #e2e8f0;flex-shrink:0;background:#f8fafc;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+                <p id="alertas-footer-msg" style="font-size:10px;font-weight:700;color:#64748b;"></p>
+                <div style="display:flex;gap:8px;">
+                    <button id="alertas-btn-update" onclick="checklistGoUpdate()" style="display:none;padding:8px 18px;border:none;border-radius:8px;font-size:11px;font-weight:900;cursor:pointer;background:#111;color:#fff;font-family:'N27',sans-serif;">✏️ IR PARA ATIVIDADES</button>
+                    <button id="alertas-btn-close" onclick="alertasClose()" style="display:none;padding:8px 18px;border:1px solid #e2e8f0;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer;background:#fff;color:#64748b;">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- ══ MODAL SURPRESA SEMANAL ══ -->
     <div id="surpresa-modal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.92);align-items:center;justify-content:center;flex-direction:column;gap:16px;">
