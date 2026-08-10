@@ -1091,7 +1091,7 @@
                     <h2 style="font-family:'N27',sans-serif;font-size:13px;font-weight:900;text-transform:uppercase;letter-spacing:0.08em;color:#1e293b;">🏥 Saúde dos Dados</h2>
                     <p class="text-[10px] text-slate-400 mt-1">Monitoramento de atualização dos cards por time. Prazo semanal: toda sexta-feira.</p>
                 </div>
-                <button onclick="renderTeamHealth()" style="background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:10px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer;">↻ Atualizar</button>
+                <button onclick="renderTeamHealth(); renderAllOutdated(); renderDiagnostico();" style="background:#f8fafc;border:1px solid #e2e8f0;color:#64748b;font-size:10px;font-weight:700;padding:6px 14px;border-radius:8px;cursor:pointer;">↻ Atualizar</button>
             </div>
 
             <!-- Painel de resumo geral -->
@@ -1116,6 +1116,19 @@
                 </div>
                 <div class="p-4" id="saudeAllOutdatedContainer">
                     <div class="text-center text-slate-400 text-xs py-4">Clique em "Atualizar" para carregar.</div>
+                </div>
+            </div>
+
+            <!-- Diagnóstico por equipe -->
+            <div class="card overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-[10px] font-black uppercase text-slate-400 tracking-widest">🔍 Diagnóstico por Equipe</h3>
+                        <p class="text-[9px] text-slate-400 mt-0.5">Status de desatualizados e vencidos por time — popup de alertas.</p>
+                    </div>
+                </div>
+                <div class="p-4" id="saudeDiagnosticoContainer">
+                    <div class="text-center text-slate-400 text-xs py-4">Carregando...</div>
                 </div>
             </div>
 
@@ -2173,22 +2186,18 @@
                     </div>
                     <input type="hidden" id="editProject">
                 </div>
-                <div>
-                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Setor</label>
-                    <select id="editSector" class="w-full p-2 border rounded-md text-xs bg-slate-50 uppercase">
-                        <option value="">Selecione...</option>
-                    </select>
-                </div>
+                <input type="hidden" id="editSector">
                 <div class="md:col-span-2">
-                    <label class="block text-[9px] font-bold text-slate-400 uppercase">Título da Atividade</label>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Título da Atividade</label>
                     <input type="text" id="editTitle" class="w-full p-2 border rounded-md text-sm font-bold bg-slate-50">
                 </div>
                 
                 <div class="md:col-span-2">
-                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Time Responsável</label>
-                    <select id="editOwnerSector" class="w-full p-2 border rounded-md text-xs bg-slate-50 font-bold">
-                        <option value="">Selecione o time...</option>
-                    </select>
+                    <label class="block text-[9px] font-bold text-slate-400 uppercase mb-1">Times Responsáveis <span style="font-weight:400;color:#94a3b8;">(pode selecionar mais de um)</span></label>
+                    <div id="editOwnerSectorList" style="border:1px solid #e2e8f0;border-radius:6px;padding:8px;background:#f8fafc;max-height:120px;overflow-y:auto;display:flex;flex-wrap:wrap;gap:6px;">
+                        <span style="font-size:10px;color:#94a3b8;">Carregando times...</span>
+                    </div>
+                    <input type="hidden" id="editOwnerSector">
                     <input type="hidden" id="editOwner">
                 </div>
                 <div>
@@ -2576,7 +2585,7 @@
             if (btnSaude) btnSaude.className = tab === 'saude' ? 'pb-2 tab-active' : 'pb-2 tab-inactive';
             if (tab !== 'canvas' && tab !== 'gantt') updateAtrasoBadge();
             if (tab === 'analise') { updateCharts(); renderGantt(); renderOwnerChart(); }
-            if (tab === 'saude') { renderTeamHealth(); renderAllOutdated(); }
+            if (tab === 'saude') { renderTeamHealth(); renderAllOutdated(); renderDiagnostico(); }
         }
 
         // ══════════════════════════════════════════════════════
@@ -2726,16 +2735,16 @@
             const filter = (document.getElementById('hub-dash-pde-filter')?.value) || 'all';
             const hoje = new Date(TODAY_ISO + 'T00:00:00');
             const tasks = (window.tasks || []).filter(t => {
+                if (t.archived) return false;
                 const pde = t.pde || 'desenvolvimento';
                 return filter === 'all' || pde === filter;
             });
 
             let total = tasks.length, pendente = 0, andamento = 0, concluido = 0, atraso = 0;
             tasks.forEach(t => {
-                let st = t.status;
-                if (st !== 'concluido' && st !== 'concluido_atraso' && st !== 'atraso' && t.deadline) {
-                    if (new Date(t.deadline + 'T00:00:00') < hoje) st = 'atraso';
-                }
+                const isConcluded = t.status === 'concluido' || t.status === 'concluido_atraso';
+                const isVencida = !isConcluded && t.status !== 'atraso' && t.deadline && new Date(t.deadline + 'T00:00:00') < hoje;
+                const st = (t.status === 'atraso' || isVencida) ? 'atraso' : t.status;
                 if (st === 'pendente') pendente++;
                 else if (st === 'andamento') andamento++;
                 else if (st === 'concluido' || st === 'concluido_atraso') concluido++;
@@ -3295,8 +3304,10 @@
             const items = document.querySelectorAll('.history-item');
             const data = [];
             items.forEach(item => {
-                const date = item.querySelector('.hist-date').value;
-                const text = item.querySelector('.hist-text').value;
+                const dateEl = item.querySelector('.hist-date');
+                const textEl = item.querySelector('.hist-text');
+                const date = dateEl ? dateEl.value : '';
+                const text = textEl ? textEl.value : '';
                 if(date || text) data.push({ date, text });
             });
             return JSON.stringify(data);
@@ -3475,7 +3486,7 @@
                 const mP = projF.has('all') || taskProjArr.some(p => projF.has(p));
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
-                const mO = ownerF.has('all') || ownerF.has(t.sector || '') || taskOwners.some(o => ownerF.has(o));
+                const mO = ownerF.has('all') || getTaskSectors(t).some(s => ownerF.has(s)) || taskOwners.some(o => ownerF.has(o));
                 const atualF = window.activeAtualFilter || 'all';
                 const mA = atualF === 'all' || (t.atualizacao || 'houve') === atualF;
                 const mSearch = !search
@@ -3509,7 +3520,9 @@
                 const titleHl    = search ? highlightSearch(t.title, search) : (t.title || '');
                 const taskProjects = Array.isArray(t.projects) && t.projects.length ? t.projects : (t.project ? [t.project] : []);
                 const projectHl  = search ? highlightSearch(taskProjects.join(', '), search) : (taskProjects.join(', ') || '');
-                const sectorHl   = search ? highlightSearch(t.sector || '-', search) : (t.sector || '-');
+                const taskSectors = getTaskSectors(t);
+                const sectorText = taskSectors.join(', ') || '-';
+                const sectorHl   = search ? highlightSearch(sectorText, search) : sectorText;
                 const ownersText = Array.isArray(t.owners) && t.owners.length ? t.owners.join(', ') : (t.owner||'-');
                 const ownersHl   = search ? highlightSearch(ownersText, search) : ownersText;
 
@@ -3596,9 +3609,17 @@
             const projects = Array.isArray(t.projects) ? t.projects : (t.project ? [t.project] : []);
             setSelectedProjects(projects);
             document.getElementById('editSector').value = t.sector || '';
-            // Time responsável — usa sector da task
+            // Times responsáveis — suporta array (sectors) e string (sector)
+            const taskSectors = Array.isArray(t.sectors) && t.sectors.length ? t.sectors : (t.sector ? [t.sector] : []);
+            const sectorList = document.getElementById('editOwnerSectorList');
+            if (sectorList) {
+                sectorList.dataset.selected = JSON.stringify(taskSectors);
+                sectorList.querySelectorAll('.task-sector-cb').forEach(cb => {
+                    cb.checked = taskSectors.includes(cb.value);
+                });
+            }
             const ownerSectorSel = document.getElementById('editOwnerSector');
-            if (ownerSectorSel) ownerSectorSel.value = t.sector || '';
+            if (ownerSectorSel) ownerSectorSel.value = taskSectors[0] || '';
             document.getElementById('editTitle').value = t.title;
             document.getElementById('editStatus').value = t.status;
             document.getElementById('editStart').value = t.start || '';
@@ -3664,6 +3685,11 @@
             document.getElementById('editIdx').value = crypto.randomUUID();
             setSelectedProjects([]);
             document.getElementById('editSector').value = '';
+            const sectorListNew = document.getElementById('editOwnerSectorList');
+            if (sectorListNew) {
+                sectorListNew.dataset.selected = '[]';
+                sectorListNew.querySelectorAll('.task-sector-cb').forEach(cb => { cb.checked = false; });
+            }
             const ownerSectorSelNew = document.getElementById('editOwnerSector');
             if (ownerSectorSelNew) ownerSectorSelNew.value = '';
             document.getElementById('editTitle').value = '';
@@ -3688,11 +3714,19 @@
             document.getElementById('taskModal').classList.replace('hidden', 'flex');
         }
 
-        function closeModal() {
+        function closeModal(clearOverdue = true) {
             document.getElementById('taskModal').classList.replace('flex', 'hidden');
-            // Se estava reprogramando via popup de vencidas mas cancelou, limpa o id
-            // (popup continua aberto — não burla o sistema)
-            window._overdueReprogramarId = null;
+            if (clearOverdue) window._overdueReprogramarId = null;
+            // Se o popup de alertas estava aberto, re-renderiza conteúdo após fechar o card
+            // (para refletir se o card foi atualizado ou reprogramado)
+            const alertasEl = document.getElementById('alertas-modal');
+            if (alertasEl && alertasEl.style.display === 'flex') {
+                setTimeout(() => {
+                    // Fecha e re-abre para atualizar lista
+                    alertasEl.style.display = 'none';
+                    if (typeof showAlertasModal === 'function') showAlertasModal();
+                }, 600);
+            }
         }
 
         async function deleteTask() {
@@ -3707,6 +3741,9 @@
 
         async function saveTask() {
             const btn = document.getElementById('btnSave');
+            // Garante que btn sempre é resetado em qualquer erro
+            const resetBtn = () => { if (btn) { btn.innerText = "Salvar Atividade"; btn.disabled = false; } };
+            try {
             let finalDeadline = document.getElementById('editDeadline').value;
             let finalOldExpectations = document.getElementById('editOldExpectations').value;
             const newDate = document.getElementById('newDeadline').value;
@@ -3764,9 +3801,9 @@
             btn.disabled = true;
             const selectedOwners = getSelectedOwners();
             const selProjects = getSelectedProjects();
-            // Time responsável: usa o dropdown de setor do modal
-            const selectedSector = (document.getElementById('editOwnerSector')?.value || document.getElementById('editSector').value || '').toUpperCase();
-            // Sincroniza editSector com o valor escolhido
+            // Times responsáveis: coleta todos os checkboxes marcados
+            const selectedSectors = [...document.querySelectorAll('.task-sector-cb:checked')].map(cb => cb.value);
+            const selectedSector  = selectedSectors[0] || (document.getElementById('editSector').value || '').toUpperCase();
             if (document.getElementById('editSector')) document.getElementById('editSector').value = selectedSector;
 
             const payload = {
@@ -3774,6 +3811,7 @@
                 project: selProjects[0] || '',
                 projects: selProjects,
                 sector: selectedSector,
+                sectors: selectedSectors.length ? selectedSectors : (selectedSector ? [selectedSector] : []),
                 title: document.getElementById('editTitle').value,
                 owner: selectedSector, // mantém owner como setor para compatibilidade
                 owners: selectedSector ? [selectedSector] : [],
@@ -3798,15 +3836,18 @@
             };
 
             // Só atualiza updatedAt se algo além do time (sector) mudou
-            const onlySectorChanged = currentTask.id && (() => {
-                const fields = ['title','status','start','deadline','progress','problems','nextSteps',
-                    'criticalPath','urgente','oldExpectations','notes'];
-                return fields.every(f => {
-                    const oldVal = String(currentTask[f] ?? '');
-                    const newVal = String(payload[f] ?? '');
-                    return oldVal === newVal;
-                }) && payload.sector !== (currentTask.sector || '');
-            })();
+            // Preserva updatedAt se a única coisa que mudou foi o(s) time(s)
+            const contentFields = ['title','status','start','deadline','progress','problems','nextSteps',
+                'criticalPath','urgente','oldExpectations','notes'];
+            const contentUnchanged = currentTask.id && contentFields.every(f => {
+                const oldVal = String(currentTask[f] ?? '');
+                const newVal = String(payload[f] ?? '');
+                return oldVal === newVal;
+            });
+            // Verifica se sectors mudou (compara arrays como string)
+            const oldSectors = JSON.stringify([...(Array.isArray(currentTask.sectors) ? currentTask.sectors : (currentTask.sector ? [currentTask.sector] : []))].sort());
+            const newSectors = JSON.stringify([...(payload.sectors || [])].sort());
+            const onlySectorChanged = contentUnchanged; // se conteúdo não mudou, preserva — seja setor igual ou diferente
 
             payload.updatedAt  = onlySectorChanged ? (currentTask.updatedAt || Date.now()) : Date.now();
             payload.updatedBy  = onlySectorChanged ? (currentTask.updatedBy || window._currentUserName || 'Sistema') : (window._currentUserName || 'Sistema');
@@ -3814,37 +3855,8 @@
                 await window.saveToFirebase(payload);
                 btn.innerText = "Salvar Atividade";
                 btn.disabled = false;
-                closeModal();
-                // Se reprogramou uma vencida, verifica se o prazo realmente mudou para o futuro
-                if (window._overdueReprogramarId) {
-                    const rid = String(window._overdueReprogramarId);
-                    const newDeadline = payload.deadline;
-                    const today = TODAY_ISO;
-                    if (newDeadline && newDeadline > today) {
-                        // Prazo mudou para o futuro — marca como tratada
-                        _overdueHandled.add(rid);
-                        window._overdueReprogramarId = null;
-                        overdueCheckDone();
-                    } else {
-                        // Prazo não mudou ou ainda está vencido — mantém na lista
-                        window._overdueReprogramarId = null;
-                    }
-                    // Re-renderiza lista do overdue
-                    const pde = window._activePDE || 'desenvolvimento';
-                    const currentUser = window._currentUserName || '';
-                    const userRecord = (window.users || []).find(u => u.name === currentUser);
-                    const userTeams = Array.isArray(userRecord?.sectors) && userRecord.sectors.length
-                        ? userRecord.sectors : (userRecord?.sector ? [userRecord.sector] : []);
-                    const today2 = new Date(TODAY_ISO + 'T00:00:00');
-                    const allOverdue = (window.tasks || []).filter(t2 =>
-                        !t2.archived &&
-                        (t2.pde || 'desenvolvimento') === pde &&
-                        userTeams.includes(t2.sector || '') &&
-                        t2.status !== 'concluido' && t2.status !== 'concluido_atraso' &&
-                        t2.deadline && new Date(t2.deadline + 'T00:00:00') < today2
-                    );
-                    if (allOverdue.length > 0) overdueRenderList(allOverdue);
-                }
+                closeModal(false); // false = não limpa overdueReprogramarId ainda
+                // overdueReprogramarId é limpo pelo closeModal via re-render do popup
                 // Se duração mudou em atividade linkada, propaga sucessoras
                 if (linkedDurationChanged) {
                     const idx = (window.tasks||[]).findIndex(t => String(t.id) === String(currentId));
@@ -3858,9 +3870,14 @@
                 }
             } catch(err) {
                 console.error('Erro ao salvar:', err);
-                btn.innerText = "Salvar Atividade";
-                btn.disabled = false;
+                resetBtn();
                 alert('❌ Erro ao salvar. Verifique sua conexão e tente novamente.\n\nDetalhes: ' + err.message);
+            }
+            } catch(outerErr) {
+                // Captura qualquer erro antes do try interno (ex: getHistoryData, getSelectedOwners)
+                console.error('Erro crítico em saveTask:', outerErr);
+                resetBtn();
+                alert('❌ Erro ao processar. Tente novamente.\n\nDetalhes: ' + outerErr.message);
             }
         }
 
@@ -4120,7 +4137,7 @@
                 const mP = projF.has('all') || projF.has(t.project);
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
-                const mO = ownerF.has('all') || ownerF.has(t.sector || '') || taskOwners.some(o => ownerF.has(o));
+                const mO = ownerF.has('all') || getTaskSectors(t).some(s => ownerF.has(s)) || taskOwners.some(o => ownerF.has(o));
                 const mSearch = !search
                     || (t.title||'').toLowerCase().includes(search)
                     || (t.owner||'').toLowerCase().includes(search)
@@ -5210,6 +5227,13 @@
             return lastFriday;
         }
 
+
+        // Retorna os times de uma task (suporta sector string e sectors array)
+        function getTaskSectors(t) {
+            if (Array.isArray(t.sectors) && t.sectors.length) return t.sectors;
+            if (t.sector) return [t.sector];
+            return [];
+        }
         // Retorna true se o card está desatualizado (não atualizado desde a última sexta)
         function isTaskOutdated(t) {
             if (t.archived) return false;
@@ -5243,10 +5267,12 @@
             // Agrupa por time (sector)
             const teams = {};
             tasks.forEach(t => {
-                const team = t.sector || '— Sem time —';
-                if (!teams[team]) teams[team] = { total: 0, outdated: [] };
-                teams[team].total++;
-                if (isTaskOutdated(t)) teams[team].outdated.push(t);
+                const taskTeams = getTaskSectors(t).length ? getTaskSectors(t) : ['— Sem time —'];
+                taskTeams.forEach(team => {
+                    if (!teams[team]) teams[team] = { total: 0, outdated: [] };
+                    teams[team].total++;
+                    if (isTaskOutdated(t)) teams[team].outdated.push(t);
+                });
             });
             const sorted = Object.entries(teams).sort((a,b) => b[1].outdated.length - a[1].outdated.length);
             container.innerHTML = sorted.map(([team, data]) => {
@@ -5340,7 +5366,7 @@
                             const col  = dias > 21 ? '#ef4444' : dias > 14 ? '#f59e0b' : '#ea580c';
                             return `<tr style="background:${bg};border-bottom:1px solid #f1f5f9;">
                                 <td style="padding:8px 12px;font-weight:600;color:#1e293b;">${t.title}</td>
-                                <td style="padding:8px 12px;color:#64748b;">${t.sector || '—'}</td>
+                                <td style="padding:8px 12px;color:#64748b;">${getTaskSectors(t).join(', ')||'—'}</td>
                                 <td style="padding:8px 12px;color:#64748b;">${proj}</td>
                                 <td style="padding:8px 12px;font-weight:700;color:${col};">${dias > 998 ? 'Nunca' : dias + 'd'}</td>
                                 <td style="padding:8px 12px;">
@@ -5353,6 +5379,91 @@
             </div>`;
         }
         window.renderAllOutdated = renderAllOutdated;
+
+        // ── Diagnóstico por equipe ────────────────────────────────────
+        function renderDiagnostico() {
+            const el = document.getElementById('saudeDiagnosticoContainer');
+            if (!el) return;
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+            const pde  = window._activePDE || 'desenvolvimento';
+
+            // Coleta todos os times cadastrados
+            const setores = ((window.configs && window.configs.setores) || []).map(s => s.name).filter(Boolean);
+            // Adiciona times que existem nos cards mas não estão nas configs
+            const tiposNasAtv = [...new Set((window.tasks||[]).flatMap(t => getTaskSectors(t)))];
+            const todosOsTimes = [...new Set([...setores, ...tiposNasAtv])].sort();
+
+            if (!todosOsTimes.length) {
+                el.innerHTML = '<p class="text-center text-slate-400 text-xs py-4">Nenhum time cadastrado.</p>';
+                return;
+            }
+
+            const tasks = (window.tasks || []).filter(t => !t.archived && (t.pde||'desenvolvimento') === pde);
+
+            const rows = todosOsTimes.map(time => {
+                const timeTasks = tasks.filter(t => getTaskSectors(t).includes(time));
+                if (!timeTasks.length) return null;
+
+                const total     = timeTasks.length;
+                const concluidas = timeTasks.filter(t => t.status==='concluido'||t.status==='concluido_atraso').length;
+                const ativas    = total - concluidas;
+
+                // Desatualizadas (sem att desde última sexta)
+                const desatual  = timeTasks.filter(t => isTaskOutdated(t));
+
+                // Vencidas (prazo < hoje, não concluídas)
+                const vencidas  = timeTasks.filter(t =>
+                    t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
+                    t.deadline && new Date(t.deadline + 'T00:00:00') < hoje
+                );
+
+                const pctDesatual = ativas > 0 ? Math.round((desatual.length / ativas) * 100) : 0;
+                const statusColor = vencidas.length > 0 ? '#ef4444' : desatual.length > 0 ? '#f59e0b' : '#10b981';
+                const statusIcon  = vencidas.length > 0 ? '🚨' : desatual.length > 0 ? '⚠️' : '✅';
+
+                return { time, total, ativas, concluidas, desatual, vencidas, pctDesatual, statusColor, statusIcon };
+            }).filter(Boolean);
+
+            el.innerHTML = `<div style="overflow:auto;border:1px solid #e2e8f0;border-radius:10px;">
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead style="background:#f8fafc;position:sticky;top:0;">
+                        <tr>
+                            <th style="padding:10px 14px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Time</th>
+                            <th style="padding:10px 14px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Total</th>
+                            <th style="padding:10px 14px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Ativas</th>
+                            <th style="padding:10px 14px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Desatual.</th>
+                            <th style="padding:10px 14px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#ef4444;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Vencidas</th>
+                            <th style="padding:10px 14px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((r,i) => `
+                        <tr style="background:${i%2===0?'#fff':'#f8fafc'};border-bottom:1px solid #f1f5f9;">
+                            <td style="padding:10px 14px;font-weight:700;color:#1e293b;">${r.time}</td>
+                            <td style="padding:10px 14px;text-align:center;color:#64748b;">${r.total}</td>
+                            <td style="padding:10px 14px;text-align:center;color:#64748b;">${r.ativas}</td>
+                            <td style="padding:10px 14px;text-align:center;">
+                                ${r.desatual.length > 0
+                                    ? `<span style="font-weight:700;color:#f59e0b;">${r.desatual.length} (${r.pctDesatual}%)</span>`
+                                    : `<span style="color:#10b981;">✓ 0</span>`}
+                            </td>
+                            <td style="padding:10px 14px;text-align:center;">
+                                ${r.vencidas.length > 0
+                                    ? `<span style="font-weight:700;color:#ef4444;">${r.vencidas.length}</span>`
+                                    : `<span style="color:#10b981;">✓ 0</span>`}
+                            </td>
+                            <td style="padding:10px 14px;text-align:center;">
+                                <span style="font-size:13px;" title="${r.vencidas.length>0?'Tem vencidas — popup bloqueante ativo':r.desatual.length>0?'Tem desatualizadas — popup de alerta ativo':'Tudo em dia'}">${r.statusIcon}</span>
+                            </td>
+                        </tr>`).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div style="margin-top:10px;font-size:9px;color:#94a3b8;">
+                🚨 = tem vencidas (popup bloqueante) · ⚠️ = tem desatualizadas (popup de alerta) · ✅ = tudo em dia
+            </div>`;
+        }
+        window.renderDiagnostico = renderDiagnostico;
 
         // ── Checklist semanal ─────────────────────────────────────────
         // ══════════════════════════════════════════════════════
@@ -5380,7 +5491,7 @@
             const overdue = (window.tasks || []).filter(t =>
                 !t.archived &&
                 (t.pde || 'desenvolvimento') === pde &&
-                userTeams.includes(t.sector || '') &&
+                getTaskSectors(t).some(s => userTeams.includes(s)) &&
                 t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
                 t.deadline && new Date(t.deadline + 'T00:00:00') < today &&
                 !_overdueHandled.has(String(t.id))
@@ -5390,7 +5501,7 @@
             const outdated = (window.tasks || []).filter(t =>
                 !t.archived &&
                 (t.pde || 'desenvolvimento') === pde &&
-                userTeams.includes(t.sector || '') &&
+                getTaskSectors(t).some(s => userTeams.includes(s)) &&
                 isTaskOutdated(t) &&
                 !overdue.find(o => o.id === t.id) // evita duplicar vencidas
             );
@@ -5432,7 +5543,7 @@
             const btnUpdate = document.getElementById('alertas-btn-update');
             if (footerMsg) footerMsg.textContent = hasOverdue ? 'Trate todas as atividades vencidas para poder fechar.' : '';
             if (btnClose)  btnClose.style.display  = hasOverdue ? 'none' : 'inline-block';
-            if (btnUpdate) btnUpdate.style.display = hasOutdated ? 'inline-block' : 'none';
+            if (btnUpdate) btnUpdate.style.display = (hasOutdated && !hasOverdue) ? 'inline-block' : 'none';
 
             document.getElementById('alertas-modal').style.display = 'flex';
         }
@@ -5478,7 +5589,7 @@
                         ${outdated.map(t => {
                             const dias = daysSinceUpdate(t);
                             const proj = t.project || (Array.isArray(t.projects) && t.projects[0]) || '';
-                            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;cursor:pointer;" onclick="editTask('${t.id}');alertasClose(true)">
+                            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;cursor:pointer;" onclick="editTask('${t.id}')">
                                 <div>
                                     <div style="font-size:11px;font-weight:700;color:#1e293b;">${t.title}</div>
                                     ${proj ? `<div style="font-size:9px;color:#94a3b8;">${proj}</div>` : ''}
@@ -5501,7 +5612,7 @@
             const remaining = (window.tasks || []).filter(t =>
                 !t.archived &&
                 (t.pde || 'desenvolvimento') === pde &&
-                userTeams.includes(t.sector || '') &&
+                getTaskSectors(t).some(s => userTeams.includes(s)) &&
                 t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
                 t.deadline && new Date(t.deadline + 'T00:00:00') < today &&
                 !_overdueHandled.has(String(t.id))
@@ -5910,33 +6021,24 @@
         function updateConfigSelects() {
             const cfg = window.configs || { empreendimentos: [], setores: [] };
             const projSel = document.getElementById('editProject');
-            const setorSel = document.getElementById('editSector');
-            if (!projSel || !setorSel) return;
+            if (!projSel) return;
 
             const curProj = projSel.value;
-            const curSetor = setorSel.value;
-
             projSel.innerHTML = '<option value="">Selecione...</option>';
             cfg.empreendimentos.forEach(e => {
                 projSel.innerHTML += `<option value="${e.name}">${e.name}</option>`;
             });
             if (curProj) projSel.value = curProj;
 
-            setorSel.innerHTML = '<option value="">Selecione...</option>';
-            cfg.setores.forEach(s => {
-                setorSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-            });
-            if (curSetor) setorSel.value = curSetor;
-
-            // Popula também o dropdown de time responsável no modal
-            const ownerSectorSel = document.getElementById('editOwnerSector');
-            if (ownerSectorSel) {
-                const curOwnerSector = ownerSectorSel.value;
-                ownerSectorSel.innerHTML = '<option value="">Selecione o time...</option>';
-                cfg.setores.forEach(s => {
-                    ownerSectorSel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-                });
-                if (curOwnerSector) ownerSectorSel.value = curOwnerSector;
+            // Popula checkboxes de times responsáveis no modal de task
+            const taskSectorList = document.getElementById('editOwnerSectorList');
+            if (taskSectorList) {
+                const curSectors = taskSectorList.dataset.selected ? JSON.parse(taskSectorList.dataset.selected) : [];
+                taskSectorList.innerHTML = cfg.setores.length ? cfg.setores.map(s =>
+                    `<label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:11px;font-weight:600;color:#1e293b;padding:3px 8px;border-radius:5px;background:#fff;border:1px solid #e2e8f0;">
+                        <input type="checkbox" class="task-sector-cb" value="${s.name}" ${curSectors.includes(s.name)?'checked':''} style="accent-color:#6366f1;cursor:pointer;"> ${s.name}
+                    </label>`
+                ).join('') : '<span style="font-size:10px;color:#94a3b8;">Nenhum setor cadastrado.</span>';
             }
         }
 
@@ -9708,3 +9810,4 @@ Essa ação não pode ser desfeita.`)) return;
 
 </body>
 </html>
+                    
