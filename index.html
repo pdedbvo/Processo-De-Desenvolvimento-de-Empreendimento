@@ -722,6 +722,9 @@
                         <option value="">— selecione —</option>
                     </select>
                 </div>
+                <button onclick="openHubSaude()" style="display:flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--hub-btn-border);color:var(--hub-btn-color);padding:8px 16px;border-radius:8px;font-size:10px;font-weight:700;font-family:'N27',sans-serif;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;">
+                    🏥 Saúde dos Dados
+                </button>
                 <button onclick="openHubConfigs()" style="display:flex;align-items:center;gap:8px;background:transparent;border:1px solid var(--hub-btn-border);color:var(--hub-btn-color);padding:8px 16px;border-radius:8px;font-size:10px;font-weight:700;font-family:'N27',sans-serif;text-transform:uppercase;letter-spacing:0.08em;cursor:pointer;transition:all 0.2s;">
                     ⚙ Configurações
                 </button>
@@ -871,6 +874,39 @@
     </div>
 
     <!-- Modal Configurações do HUB -->
+    <!-- ══ MODAL SAÚDE DOS DADOS GLOBAL (HUB) ══ -->
+    <div id="hub-saude-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);overflow-y:auto;">
+        <div style="max-width:1100px;margin:0 auto;padding:32px 24px;">
+            <!-- Header -->
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <div>
+                    <h2 style="font-family:'N27',sans-serif;font-size:16px;font-weight:900;color:#fff;text-transform:uppercase;letter-spacing:0.08em;">🏥 Saúde dos Dados — Consolidado</h2>
+                    <p style="font-size:11px;color:#94a3b8;margin-top:4px;">Diagnóstico de atualização e vencimentos por time e PDE.</p>
+                </div>
+                <div style="display:flex;gap:10px;align-items:center;">
+                    <div style="display:flex;align-items:center;gap:6px;background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:6px 12px;">
+                        <span style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;">PDE:</span>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:700;color:#ccc;white-space:nowrap;">
+                            <input type="checkbox" class="hub-saude-pde-cb" value="prelancamento" onchange="renderHubSaude()" style="accent-color:#7247F6;cursor:pointer;"> Pré-lançamento
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:700;color:#ccc;white-space:nowrap;">
+                            <input type="checkbox" class="hub-saude-pde-cb" value="desenvolvimento" checked onchange="renderHubSaude()" style="accent-color:#46B276;cursor:pointer;"> Desenvolvimento
+                        </label>
+                        <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:10px;font-weight:700;color:#ccc;white-space:nowrap;">
+                            <input type="checkbox" class="hub-saude-pde-cb" value="entrega" checked onchange="renderHubSaude()" style="accent-color:#FCBF44;cursor:pointer;"> Entrega
+                        </label>
+                    </div>
+                    <button onclick="exportSaudeRelatorio()" style="display:flex;align-items:center;gap:6px;background:#1d6f42;border:none;color:#fff;padding:8px 16px;border-radius:8px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;letter-spacing:.06em;">⬇ Baixar Relatório</button>
+                    <button onclick="document.getElementById('hub-saude-modal').style.display='none'" style="background:transparent;border:1px solid #444;color:#888;width:36px;height:36px;border-radius:8px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;">✕</button>
+                </div>
+            </div>
+            <!-- Summary cards -->
+            <div id="hub-saude-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;"></div>
+            <!-- Diagnostico table -->
+            <div id="hub-saude-table" style="background:#fff;border-radius:14px;overflow:hidden;"></div>
+        </div>
+    </div>
+
     <div id="hub-configs-modal" style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,0.85);backdrop-filter:blur(6px);overflow-y:auto;">
         <div style="min-height:100vh;padding:40px 20px;display:flex;align-items:flex-start;justify-content:center;">
             <div style="background:#111;border:1px solid #222;border-radius:20px;width:100%;max-width:960px;overflow:hidden;">
@@ -904,6 +940,7 @@
         window.confirmSenha    = function()     { _hubCall('_confirmSenha', []); };
         window.closeSenhaModal = function()     { _hubCall('_closeSenhaModal', []); };
         window.openHubConfigs  = function()     { _hubCall('_openHubConfigs', []); };
+        window.openHubSaude    = function()     { _hubCall('openHubSaude', []); };
         window.closeHubConfigs = function()     { _hubCall('_closeHubConfigs', []); };
         window.renderHubDashboard = function()  { _hubCall('_renderHubDashboard', []); };
         window.toggleDarkMode  = function()     { _hubCall('_toggleDarkMode', []); };
@@ -5465,6 +5502,190 @@
         }
         window.renderDiagnostico = renderDiagnostico;
 
+        // ══════════════════════════════════════════════════════
+        // SAÚDE DOS DADOS GLOBAL — HUB
+        // ══════════════════════════════════════════════════════
+        function openHubSaude() {
+            document.getElementById('hub-saude-modal').style.display = 'block';
+            renderHubSaude();
+        }
+
+        function renderHubSaude() {
+            const selectedPdes = [...document.querySelectorAll('.hub-saude-pde-cb:checked')].map(cb => cb.value);
+            const filterAll = selectedPdes.length === 0;
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+
+            const allTasks = (window.tasks || []).filter(t => {
+                if (t.archived) return false;
+                if (!filterAll && !selectedPdes.includes(t.pde||'desenvolvimento')) return false;
+                return true;
+            });
+
+            const ativas = allTasks.filter(t => t.status !== 'concluido' && t.status !== 'concluido_atraso');
+            const desatualizadas = ativas.filter(t => isTaskOutdated(t));
+            const vencidas = ativas.filter(t => t.deadline && new Date(t.deadline+'T00:00:00') < hoje);
+            const pctD = ativas.length > 0 ? Math.round((desatualizadas.length / ativas.length)*100) : 0;
+            const pctV = ativas.length > 0 ? Math.round((vencidas.length / ativas.length)*100) : 0;
+
+            // Summary cards
+            const sumEl = document.getElementById('hub-saude-summary');
+            if (sumEl) sumEl.innerHTML = [
+                { label:'Cards Ativos', val: ativas.length, color:'#6366f1', sub:'' },
+                { label:'Desatualizados', val: desatualizadas.length, color: pctD===0?'#10b981':pctD<30?'#f59e0b':'#ef4444', sub:`${pctD}% das ativas` },
+                { label:'Vencidos', val: vencidas.length, color: vencidas.length===0?'#10b981':'#ef4444', sub:`${pctV}% das ativas` },
+            ].map(c => `
+                <div style="background:#1a1a1a;border:1px solid ${c.color}44;border-top:3px solid ${c.color};border-radius:12px;padding:20px;">
+                    <div style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.1em;margin-bottom:6px;">${c.label}</div>
+                    <div style="font-size:32px;font-weight:900;color:${c.color};font-family:'N27',sans-serif;">${c.val}</div>
+                    ${c.sub ? `<div style="font-size:10px;color:#64748b;margin-top:4px;">${c.sub}</div>` : ''}
+                </div>`).join('');
+
+            // Tabela por time
+            const setores = [...new Set([
+                ...((window.configs?.setores)||[]).map(s=>s.name),
+                ...allTasks.flatMap(t => getTaskSectors(t))
+            ].filter(Boolean))].sort();
+
+            const pdeLabel = {prelancamento:'Pré-lanç.',desenvolvimento:'Desenvolv.',entrega:'Entrega'};
+
+            const rows = setores.map(time => {
+                const timeTasks = allTasks.filter(t => getTaskSectors(t).includes(time));
+                if (!timeTasks.length) return null;
+                const tAtivas = timeTasks.filter(t => t.status!=='concluido'&&t.status!=='concluido_atraso');
+                const tDesatual = tAtivas.filter(t => isTaskOutdated(t));
+                const tVencidas = tAtivas.filter(t => t.deadline && new Date(t.deadline+'T00:00:00') < hoje);
+                const icon = tVencidas.length>0 ? '🚨' : tDesatual.length>0 ? '⚠️' : '✅';
+                return { time, total:timeTasks.length, ativas:tAtivas.length, tDesatual, tVencidas, icon };
+            }).filter(Boolean).sort((a,b) => (b.tVencidas.length - a.tVencidas.length) || (b.tDesatual.length - a.tDesatual.length));
+
+            const tblEl = document.getElementById('hub-saude-table');
+            if (!tblEl) return;
+            tblEl.innerHTML = `
+                <table style="width:100%;border-collapse:collapse;font-size:11px;">
+                    <thead style="background:#f8fafc;position:sticky;top:0;">
+                        <tr>
+                            <th style="padding:12px 16px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Time</th>
+                            <th style="padding:12px 16px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Total</th>
+                            <th style="padding:12px 16px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Ativas</th>
+                            <th style="padding:12px 16px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#f59e0b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Desatual.</th>
+                            <th style="padding:12px 16px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#ef4444;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Vencidas</th>
+                            <th style="padding:12px 16px;text-align:center;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;letter-spacing:.08em;border-bottom:2px solid #e2e8f0;">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${rows.map((r,i) => {
+                            const bg = i%2===0?'#fff':'#f8fafc';
+                            const detalhes = [...new Set([...r.tDesatual, ...r.tVencidas])];
+                            return `
+                            <tr style="background:${bg};border-bottom:1px solid #f1f5f9;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'table-row':'none'">
+                                <td style="padding:10px 16px;font-weight:700;color:#1e293b;">${r.time}</td>
+                                <td style="padding:10px 16px;text-align:center;color:#64748b;">${r.total}</td>
+                                <td style="padding:10px 16px;text-align:center;color:#64748b;">${r.ativas}</td>
+                                <td style="padding:10px 16px;text-align:center;">${r.tDesatual.length>0?`<span style="font-weight:700;color:#f59e0b;">${r.tDesatual.length}</span>`:'<span style="color:#10b981;">✓</span>'}</td>
+                                <td style="padding:10px 16px;text-align:center;">${r.tVencidas.length>0?`<span style="font-weight:700;color:#ef4444;">${r.tVencidas.length}</span>`:'<span style="color:#10b981;">✓</span>'}</td>
+                                <td style="padding:10px 16px;text-align:center;font-size:16px;">${r.icon}</td>
+                            </tr>
+                            <tr style="display:none;background:#fafafa;">
+                                <td colspan="6" style="padding:0 16px 12px 32px;">
+                                    ${detalhes.length ? detalhes.map(t => {
+                                        const dias = daysSinceUpdate(t);
+                                        const venc = t.deadline && new Date(t.deadline+'T00:00:00') < hoje;
+                                        const pde = pdeLabel[t.pde||'desenvolvimento']||t.pde||'';
+                                        const proj = t.project||(Array.isArray(t.projects)&&t.projects[0])||'';
+                                        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:5px 8px;margin:3px 0;border-radius:6px;background:${venc?'#fff7f7':'#fffbeb'};border:1px solid ${venc?'#fecaca':'#fde68a'};">
+                                            <div>
+                                                <span style="font-size:10px;font-weight:600;color:#1e293b;">${t.title}</span>
+                                                ${proj?`<span style="font-size:9px;color:#94a3b8;margin-left:6px;">${proj}</span>`:''}
+                                                <span style="font-size:9px;color:#94a3b8;margin-left:6px;">[${pde}]</span>
+                                            </div>
+                                            <div style="display:flex;gap:8px;flex-shrink:0;margin-left:12px;">
+                                                ${venc?`<span style="font-size:9px;font-weight:700;color:#ef4444;">🚨 Vencida ${t.deadline.split('-').reverse().join('/')}</span>`:''}
+                                                <span style="font-size:9px;font-weight:700;color:#ea580c;">${dias>998?'nunca att':dias+'d sem att'}</span>
+                                            </div>
+                                        </div>`;
+                                    }).join('') : '<p style="font-size:10px;color:#94a3b8;padding:6px 0;">Nenhum card com problema.</p>'}
+                                </td>
+                            </tr>`;
+                        }).join('')}
+                    </tbody>
+                </table>
+                <div style="padding:10px 16px;font-size:9px;color:#94a3b8;border-top:1px solid #e2e8f0;">
+                    Clique em um time para expandir os cards com problemas. 🚨 = vencidas · ⚠️ = desatualizadas · ✅ = em dia
+                </div>`;
+        }
+
+        // Exporta relatório Excel com 2 abas
+        function exportSaudeRelatorio() {
+            if (typeof XLSX === 'undefined') { alert('Biblioteca XLSX não disponível.'); return; }
+            const selectedPdes = [...document.querySelectorAll('.hub-saude-pde-cb:checked')].map(cb => cb.value);
+            const filterAll = selectedPdes.length === 0;
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+            const pdeLabel = {prelancamento:'Pré-lançamento',desenvolvimento:'Desenvolvimento',entrega:'Entrega e Implantação'};
+
+            const allTasks = (window.tasks || []).filter(t => {
+                if (t.archived) return false;
+                if (!filterAll && !selectedPdes.includes(t.pde||'desenvolvimento')) return false;
+                return true;
+            });
+
+            const setores = [...new Set([
+                ...((window.configs?.setores)||[]).map(s=>s.name),
+                ...allTasks.flatMap(t => getTaskSectors(t))
+            ].filter(Boolean))].sort();
+
+            // Aba 1: Resumo por time
+            const resumoRows = [['Time','Total','Ativas','Concluídas','Desatualizadas','Vencidas','Status']];
+            setores.forEach(time => {
+                const tt = allTasks.filter(t => getTaskSectors(t).includes(time));
+                if (!tt.length) return;
+                const ativas = tt.filter(t => t.status!=='concluido'&&t.status!=='concluido_atraso');
+                const conc   = tt.length - ativas.length;
+                const desat  = ativas.filter(t => isTaskOutdated(t)).length;
+                const venc   = ativas.filter(t => t.deadline && new Date(t.deadline+'T00:00:00') < hoje).length;
+                const status = venc>0 ? '🚨 Tem vencidas' : desat>0 ? '⚠️ Desatualizadas' : '✅ Em dia';
+                resumoRows.push([time, tt.length, ativas.length, conc, desat, venc, status]);
+            });
+
+            // Aba 2: Detalhe de todos os cards com problema
+            const detalheRows = [['Atividade','Time','Empreendimento','PDE','Status','Prazo','Dias sem att','Problema']];
+            allTasks.forEach(t => {
+                const ativa = t.status!=='concluido'&&t.status!=='concluido_atraso';
+                if (!ativa) return;
+                const desat = isTaskOutdated(t);
+                const venc  = t.deadline && new Date(t.deadline+'T00:00:00') < hoje;
+                if (!desat && !venc) return;
+                const dias  = daysSinceUpdate(t);
+                const proj  = t.project||(Array.isArray(t.projects)&&t.projects[0])||'';
+                const times = getTaskSectors(t).join(', ') || '—';
+                const problema = venc && desat ? 'Vencida + Desatualizada' : venc ? 'Vencida' : 'Desatualizada';
+                detalheRows.push([
+                    t.title, times, proj,
+                    pdeLabel[t.pde||'desenvolvimento']||t.pde||'',
+                    t.status,
+                    t.deadline ? t.deadline.split('-').reverse().join('/') : '',
+                    dias > 998 ? 'Nunca' : dias,
+                    problema
+                ]);
+            });
+
+            const wb = XLSX.utils.book_new();
+            const ws1 = XLSX.utils.aoa_to_sheet(resumoRows);
+            ws1['!cols'] = [18,8,8,10,14,10,18].map(w=>({wch:w}));
+            XLSX.utils.book_append_sheet(wb, ws1, 'Resumo por Time');
+
+            const ws2 = XLSX.utils.aoa_to_sheet(detalheRows);
+            ws2['!cols'] = [30,18,22,16,12,12,14,24].map(w=>({wch:w}));
+            XLSX.utils.book_append_sheet(wb, ws2, 'Detalhe');
+
+            const filtroLabel = filterAll ? 'todos-pdes' : selectedPdes.join('-');
+            XLSX.writeFile(wb, `saude-dados-${filtroLabel}-${TODAY_ISO}.xlsx`);
+        }
+
+        window.openHubSaude         = openHubSaude;
+        window.renderHubSaude       = renderHubSaude;
+        window.exportSaudeRelatorio = exportSaudeRelatorio;
+        // ══════════════════════════════════════════════════════
+
         // ── Checklist semanal ─────────────────────────────────────────
         // ══════════════════════════════════════════════════════
         // MODAL UNIFICADO — Vencidas + Desatualizadas
@@ -9810,4 +10031,3 @@ Essa ação não pode ser desfeita.`)) return;
 
 </body>
 </html>
-                    
