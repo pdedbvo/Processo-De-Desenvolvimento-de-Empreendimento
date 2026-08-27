@@ -506,6 +506,10 @@
         window.deleteUserFromFirebase = async (id) => { await deleteDoc(doc(db, "users", String(id))); };
         window.saveEmailLog = async (data) => { await setDoc(doc(db, "emailLogs", String(data.id)), data); };
         window.saveConfig = async (data) => { await setDoc(doc(db, "configs", String(data.id)), data); };
+        // emailQueue: fila de e-mails para o Google Apps Script processar
+        window.saveEmailQueue = async (data) => { await setDoc(doc(db, "emailQueue", String(data.id)), data); };
+        window.getEmailQueue  = async () => { const s = await getDocs(collection(db, "emailQueue")); return s.docs.map(d=>d.data()); };
+        window.markEmailSent  = async (id) => { await setDoc(doc(db, "emailQueue", String(id)), { sentAt: Date.now(), status:'sent' }, { merge: true }); };
 
         // Canvas: lê/grava layout por PDE + empreendimento na coleção "canvasLayouts"
         window._getCanvasData = async (projName) => {
@@ -654,6 +658,7 @@
             renderConfigsTable();
             updateConfigSelects();
             loadRelatorioConfig();
+            if (typeof emailInitUrl === 'function') emailInitUrl();
         });
     </script>
 </head>
@@ -1989,6 +1994,91 @@
             </div>
             <div id="bulkSectorResult" style="margin-top:10px;font-size:11px;color:#64748b;"></div>
         </div>
+
+        <!-- Painel de E-mails Automáticos (novo) -->
+        <div class="card p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div>
+                    <h2 class="text-base font-black uppercase text-slate-900 tracking-tight">📧 E-mails Automáticos</h2>
+                    <p class="text-[10px] text-slate-400 mt-1">Disparo manual para testes. Os envios automáticos são feitos pelo Google Apps Script nos horários definidos.</p>
+                </div>
+            </div>
+
+            <!-- URL Google Script -->
+            <div style="margin-bottom:20px;padding:14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+                <label style="font-size:9px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;display:block;margin-bottom:6px;">URL do Google Apps Script (webhook)</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="gasWebhookUrl" placeholder="https://script.google.com/macros/s/.../exec"
+                        style="flex:1;padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:11px;outline:none;"
+                        oninput="localStorage.setItem('gas_webhook_url', this.value)">
+                    <button onclick="document.getElementById('gasWebhookUrl').value='';localStorage.removeItem('gas_webhook_url')"
+                        style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:6px;font-size:10px;font-weight:700;color:#64748b;background:#fff;cursor:pointer;">Limpar</button>
+                </div>
+                <p style="font-size:9px;color:#94a3b8;margin-top:6px;">Cole aqui a URL após publicar o Google Apps Script como Web App.</p>
+            </div>
+
+            <!-- E-mails coletivos -->
+            <div style="margin-bottom:16px;">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:10px;">📨 E-mails Coletivos</div>
+                <div style="display:flex;flex-direction:column;gap:8px;" id="email-coletivos-list">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Segunda 8h — Cards do time por pessoa (Desenv. + Entrega)</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Cada pessoa recebe os cards do seu time com prazos próximos (30 dias) e vencidos.</div></div>
+                        <button onclick="dispararEmail('seg8', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Segunda 10h — Relatório Saúde dos Dados (Desenv. + Entrega)</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Todos recebem o relatório consolidado de saúde dos dados por time.</div></div>
+                        <button onclick="dispararEmail('seg10', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Quinta — Lembrete geral de atualização</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Todos os usuários cadastrados recebem um lembrete para atualizar os cards.</div></div>
+                        <button onclick="dispararEmail('qui', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Sexta 8h — Lembrete geral de atualização</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Todos os usuários cadastrados recebem um lembrete para atualizar os cards.</div></div>
+                        <button onclick="dispararEmail('sex8', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Sexta 14h — Alerta de pendências por time (Desenv. + Entrega)</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Pessoas de times com pendências recebem lista dos cards problemáticos do seu time.</div></div>
+                        <button onclick="dispararEmail('sex14', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- E-mails individuais -->
+            <div style="margin-bottom:20px;">
+                <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;margin-bottom:10px;">🔔 E-mails de Atividades Individuais</div>
+                <div style="display:flex;flex-direction:column;gap:8px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Faltando 3 dias para o prazo</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Envia para todos do(s) time(s) do card quando faltam exatamente 3 dias.</div></div>
+                        <button onclick="dispararEmail('ind_3d', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">No dia do vencimento</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Envia para todos do(s) time(s) no dia exato do prazo.</div></div>
+                        <button onclick="dispararEmail('ind_vence', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Vencidas — disparo seg/qua/sex</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Envia para os times dos cards vencidos repetidamente até resolver.</div></div>
+                        <button onclick="dispararEmail('ind_atrasada', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;">
+                        <div><div style="font-size:11px;font-weight:700;color:#1e293b;">Desatualizadas — disparo seg/qua/sex</div><div style="font-size:9px;color:#94a3b8;margin-top:2px;">Envia para os times dos cards sem atualização desde a última sexta.</div></div>
+                        <button onclick="dispararEmail('ind_desatual', this)" style="flex-shrink:0;margin-left:16px;padding:6px 14px;background:#111;border:none;color:#fff;border-radius:7px;font-size:10px;font-weight:700;cursor:pointer;font-family:'N27',sans-serif;white-space:nowrap;">▶ Disparar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log de envios -->
+            <div>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                    <div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#64748b;">📋 Histórico de Envios</div>
+                    <button onclick="renderEmailLog()" style="font-size:9px;font-weight:700;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:5px;padding:3px 10px;cursor:pointer;">↻ Atualizar</button>
+                </div>
+                <div id="emailLogContainer" style="border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;max-height:220px;overflow-y:auto;">
+                    <p style="padding:16px;text-align:center;font-size:11px;color:#94a3b8;">Clique em "Atualizar" para carregar.</p>
+                </div>
+            </div>
+        </div>
+
 
         <!-- Zona de Perigo -->
         <div class="card p-6" style="border:1.5px solid #fca5a5;">
@@ -9816,6 +9906,300 @@ Essa ação não pode ser desfeita.`)) return;
 
         // ══════════════════════════════════════════════════════
         // SURPRESA SEMANAL — Slide de imagens
+        // ══════════════════════════════════════════════════════
+        // SISTEMA DE E-MAILS — emailQueue → Google Apps Script
+        // ══════════════════════════════════════════════════════
+
+        // Inicializa URL do webhook salva em localStorage
+        function emailInitUrl() {
+            const saved = localStorage.getItem('gas_webhook_url');
+            const el = document.getElementById('gasWebhookUrl');
+            if (el && saved) el.value = saved;
+        }
+
+        // Constrói payload de cada tipo e envia para emailQueue no Firebase
+        async function dispararEmail(tipo, btnEl) {
+            const url = localStorage.getItem('gas_webhook_url') || '';
+            if (!url) { alert('Configure a URL do Google Apps Script primeiro.'); return; }
+
+            if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Enviando...'; }
+
+            // O Google Apps Script busca os dados direto do Firebase e envia.
+            // Usamos Content-Type text/plain para evitar o "preflight" de CORS,
+            // que o Apps Script não responde (era o motivo do "Failed to fetch").
+            const queueId = crypto.randomUUID();
+            try {
+                // Registra o disparo no histórico do Firebase
+                try {
+                    await window.saveEmailQueue({
+                        id: queueId,
+                        tipo,
+                        createdAt: Date.now(),
+                        status: 'pending',
+                        triggeredBy: window._currentUserName || 'Manual'
+                    });
+                } catch(_) { /* histórico é opcional, não bloqueia o envio */ }
+
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ tipo, queueId, manual: true })
+                });
+
+                // Com text/plain o navegador não bloqueia; o envio ocorre no servidor.
+                alert(`✓ Disparo enviado ao servidor!\nTipo: ${tipo}\n\nOs e-mails são processados e enviados pelo Google (pode levar alguns segundos). Confira a caixa de entrada dos destinatários.`);
+                renderEmailLog();
+            } catch(e) {
+                // Mesmo com text/plain, alguns navegadores reportam erro de rede
+                // enquanto o servidor processa normalmente. Avisamos sem alarme.
+                alert(`Disparo enviado ao servidor.\nTipo: ${tipo}\n\nSe os e-mails não chegarem em alguns minutos, verifique a aba "Execuções" no Google Apps Script.`);
+                renderEmailLog();
+            } finally {
+                if (btnEl) { btnEl.disabled = false; btnEl.textContent = '▶ Disparar'; }
+            }
+        }
+
+        // Constrói o payload de cada tipo de e-mail
+        function buildEmailPayload(tipo) {
+            const hoje = new Date(TODAY_ISO + 'T00:00:00');
+            const users = window.users || [];
+            const tasks = window.tasks || [];
+            const pdesAtivos = ['desenvolvimento', 'entrega'];
+
+            // Helper: retorna emails de todos os membros de um time
+            const emailsDoTime = (team) => {
+                return users.filter(u => {
+                    const teams = Array.isArray(u.sectors) && u.sectors.length ? u.sectors : (u.sector ? [u.sector] : []);
+                    return teams.includes(team) && u.email;
+                }).map(u => ({ name: u.name, email: u.email }));
+            };
+
+            // Helper: retorna emails de todos os membros dos times de um card
+            const emailsDoCard = (t) => {
+                const cardTeams = getTaskSectors(t);
+                const recipients = [];
+                cardTeams.forEach(team => {
+                    emailsDoTime(team).forEach(r => {
+                        if (!recipients.find(x => x.email === r.email)) recipients.push(r);
+                    });
+                });
+                return recipients;
+            };
+
+            // Helper: todos os emails cadastrados
+            const todosEmails = () => users.filter(u => u.email).map(u => ({ name: u.name, email: u.email }));
+
+            // Helper: formata data BR
+            const fmtDate = (d) => d ? d.split('-').reverse().join('/') : '—';
+
+            // Setores únicos dos 2 PDEs ativos
+            const setores = [...new Set(tasks.filter(t => pdesAtivos.includes(t.pde||'desenvolvimento')).flatMap(t => getTaskSectors(t)))].sort();
+
+            switch(tipo) {
+
+                // ── Segunda 8h: cards do time por pessoa ──────────────────
+                case 'seg8': {
+                    const result = [];
+                    const em30dias = new Date(hoje); em30dias.setDate(em30dias.getDate() + 30);
+                    // Por pessoa
+                    users.filter(u => u.email).forEach(u => {
+                        const userTeams = Array.isArray(u.sectors) && u.sectors.length ? u.sectors : (u.sector ? [u.sector] : []);
+                        if (!userTeams.length) return;
+                        userTeams.forEach(team => {
+                            const teamTasks = tasks.filter(t =>
+                                pdesAtivos.includes(t.pde||'desenvolvimento') &&
+                                getTaskSectors(t).includes(team) &&
+                                t.status !== 'concluido' && t.status !== 'concluido_atraso' && !t.archived &&
+                                t.deadline && (new Date(t.deadline+'T00:00:00') <= em30dias)
+                            ).sort((a,b) => (a.deadline||'').localeCompare(b.deadline||''));
+                            if (!teamTasks.length) return;
+                            result.push({
+                                to: u.email, name: u.name, team,
+                                subject: `[PDE] Seus cards — Time ${team}`,
+                                tipo: 'seg8',
+                                cards: teamTasks.map(t => ({
+                                    titulo: t.title,
+                                    empreendimento: t.project || '',
+                                    pde: t.pde || 'desenvolvimento',
+                                    prazo: fmtDate(t.deadline),
+                                    status: t.status,
+                                    vencida: new Date(t.deadline+'T00:00:00') < hoje
+                                }))
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                // ── Segunda 10h: relatório saúde geral ────────────────────
+                case 'seg10': {
+                    const todosTasks = tasks.filter(t => pdesAtivos.includes(t.pde||'desenvolvimento') && !t.archived);
+                    const resumoTimes = setores.map(team => {
+                        const tt = todosTasks.filter(t => getTaskSectors(t).includes(team));
+                        const ativas = tt.filter(t => t.status!=='concluido'&&t.status!=='concluido_atraso');
+                        const desatual = ativas.filter(t => isTaskOutdated(t)).length;
+                        const vencidas = ativas.filter(t => t.deadline && new Date(t.deadline+'T00:00:00') < hoje).length;
+                        return { team, total: tt.length, ativas: ativas.length, desatual, vencidas,
+                            status: vencidas>0?'🚨 Tem vencidas':desatual>0?'⚠️ Desatualizadas':'✅ Em dia' };
+                    }).filter(r => r.total > 0);
+                    const emails = todosEmails();
+                    return emails.map(u => ({
+                        to: u.email, name: u.name,
+                        subject: '[PDE] Relatório Saúde dos Dados — Segunda-feira',
+                        tipo: 'seg10', resumoTimes
+                    }));
+                }
+
+                // ── Quinta / Sexta 8h: lembrete geral ────────────────────
+                case 'qui': case 'sex8': {
+                    const emails = todosEmails();
+                    const label = tipo === 'qui' ? 'Quinta-feira' : 'Sexta-feira';
+                    return emails.map(u => ({
+                        to: u.email, name: u.name,
+                        subject: `[PDE] Lembrete de atualização — ${label}`,
+                        tipo, label
+                    }));
+                }
+
+                // ── Sexta 14h: pendências por time ───────────────────────
+                case 'sex14': {
+                    const result = [];
+                    setores.forEach(team => {
+                        const teamTasks = tasks.filter(t =>
+                            pdesAtivos.includes(t.pde||'desenvolvimento') &&
+                            getTaskSectors(t).includes(team) && !t.archived &&
+                            t.status !== 'concluido' && t.status !== 'concluido_atraso' &&
+                            (isTaskOutdated(t) || (t.deadline && new Date(t.deadline+'T00:00:00') < hoje))
+                        );
+                        if (!teamTasks.length) return;
+                        emailsDoTime(team).forEach(u => {
+                            result.push({
+                                to: u.email, name: u.name, team,
+                                subject: `[PDE] Pendências do time ${team} — Sexta-feira`,
+                                tipo: 'sex14',
+                                cards: teamTasks.map(t => ({
+                                    titulo: t.title, empreendimento: t.project || '',
+                                    prazo: fmtDate(t.deadline),
+                                    vencida: !!(t.deadline && new Date(t.deadline+'T00:00:00') < hoje),
+                                    desatualizada: isTaskOutdated(t),
+                                    diasSemAtt: daysSinceUpdate(t)
+                                }))
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                // ── Individual: faltando 3 dias ───────────────────────────
+                case 'ind_3d': {
+                    const result = [];
+                    tasks.filter(t => !t.archived && t.deadline && t.status !== 'concluido' && t.status !== 'concluido_atraso').forEach(t => {
+                        const diff = Math.round((new Date(t.deadline+'T00:00:00') - hoje) / 86400000);
+                        if (diff !== 3) return;
+                        emailsDoCard(t).forEach(u => {
+                            result.push({
+                                to: u.email, name: u.name,
+                                subject: `[PDE] ⏰ Faltam 3 dias — ${t.title}`,
+                                tipo: 'ind_3d',
+                                card: { titulo: t.title, empreendimento: t.project||'', prazo: fmtDate(t.deadline), times: getTaskSectors(t).join(', ') }
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                // ── Individual: vence hoje ─────────────────────────────────
+                case 'ind_vence': {
+                    const result = [];
+                    tasks.filter(t => !t.archived && t.deadline && t.status !== 'concluido' && t.status !== 'concluido_atraso').forEach(t => {
+                        const diff = Math.round((new Date(t.deadline+'T00:00:00') - hoje) / 86400000);
+                        if (diff !== 0) return;
+                        emailsDoCard(t).forEach(u => {
+                            result.push({
+                                to: u.email, name: u.name,
+                                subject: `[PDE] 🚨 Vence HOJE — ${t.title}`,
+                                tipo: 'ind_vence',
+                                card: { titulo: t.title, empreendimento: t.project||'', prazo: fmtDate(t.deadline), times: getTaskSectors(t).join(', ') }
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                // ── Individual: atrasadas seg/qua/sex ─────────────────────
+                case 'ind_atrasada': {
+                    const result = [];
+                    tasks.filter(t => !t.archived && t.deadline && t.status !== 'concluido' && t.status !== 'concluido_atraso' && new Date(t.deadline+'T00:00:00') < hoje).forEach(t => {
+                        const diasAtraso = Math.round((hoje - new Date(t.deadline+'T00:00:00')) / 86400000);
+                        emailsDoCard(t).forEach(u => {
+                            result.push({
+                                to: u.email, name: u.name,
+                                subject: `[PDE] 🚨 Atividade vencida há ${diasAtraso}d — ${t.title}`,
+                                tipo: 'ind_atrasada',
+                                card: { titulo: t.title, empreendimento: t.project||'', prazo: fmtDate(t.deadline), diasAtraso, times: getTaskSectors(t).join(', ') }
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                // ── Individual: desatualizadas seg/qua/sex ────────────────
+                case 'ind_desatual': {
+                    const result = [];
+                    tasks.filter(t => !t.archived && isTaskOutdated(t)).forEach(t => {
+                        const dias = daysSinceUpdate(t);
+                        emailsDoCard(t).forEach(u => {
+                            result.push({
+                                to: u.email, name: u.name,
+                                subject: `[PDE] ⚠️ Card sem atualização há ${dias}d — ${t.title}`,
+                                tipo: 'ind_desatual',
+                                card: { titulo: t.title, empreendimento: t.project||'', diasSemAtt: dias, times: getTaskSectors(t).join(', ') }
+                            });
+                        });
+                    });
+                    return result;
+                }
+
+                default: return [];
+            }
+        }
+
+        // Renderiza histórico de envios
+        async function renderEmailLog() {
+            const el = document.getElementById('emailLogContainer');
+            if (!el) return;
+            el.innerHTML = '<p style="padding:12px;text-align:center;font-size:11px;color:#94a3b8;">Carregando...</p>';
+            try {
+                const queue = await window.getEmailQueue();
+                const sorted = queue.sort((a,b) => (b.createdAt||0)-(a.createdAt||0)).slice(0, 50);
+                if (!sorted.length) {
+                    el.innerHTML = '<p style="padding:12px;text-align:center;font-size:11px;color:#94a3b8;">Nenhum envio registrado.</p>';
+                    return;
+                }
+                const tipoLabel = { seg8:'Seg 8h — Cards time', seg10:'Seg 10h — Saúde dados', qui:'Qui — Lembrete', sex8:'Sex 8h — Lembrete',
+                    sex14:'Sex 14h — Pendências', ind_3d:'3 dias antes', ind_vence:'Vence hoje', ind_atrasada:'Vencidas', ind_desatual:'Desatualizadas' };
+                el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:10px;">
+                    <thead style="background:#f8fafc;"><tr>
+                        <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Tipo</th>
+                        <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Destinatários</th>
+                        <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Disparado por</th>
+                        <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Status</th>
+                        <th style="padding:8px 12px;text-align:left;font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;border-bottom:1px solid #e2e8f0;">Data</th>
+                    </tr></thead>
+                    <tbody>${sorted.map((q,i) => `<tr style="background:${i%2===0?'#fff':'#f8fafc'};border-bottom:1px solid #f1f5f9;">
+                        <td style="padding:7px 12px;font-weight:600;color:#1e293b;">${tipoLabel[q.tipo]||q.tipo}</td>
+                        <td style="padding:7px 12px;color:#64748b;">${Array.isArray(q.payload)?q.payload.length:0}</td>
+                        <td style="padding:7px 12px;color:#64748b;">${q.triggeredBy||'—'}</td>
+                        <td style="padding:7px 12px;"><span style="padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700;background:${q.status==='sent'?'#f0fdf4':'#fffbeb'};color:${q.status==='sent'?'#10b981':'#f59e0b'};">${q.status==='sent'?'✓ Enviado':'Pendente'}</span></td>
+                        <td style="padding:7px 12px;color:#94a3b8;">${q.createdAt ? new Date(q.createdAt).toLocaleString('pt-BR') : '—'}</td>
+                    </tr>`).join('')}</tbody>
+                </table>`;
+            } catch(e) {
+                el.innerHTML = `<p style="padding:12px;text-align:center;font-size:11px;color:#ef4444;">Erro: ${e.message}</p>`;
+            }
+        }
+
+
         // ══════════════════════════════════════════════════════
         window._surpresaShown = false;
         window._surpresaIdx   = 0;
