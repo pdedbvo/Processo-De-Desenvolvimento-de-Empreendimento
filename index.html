@@ -4261,6 +4261,7 @@
             const ownerF = window.activeOwnerFilters  || new Set(['all']);
             const search = (document.getElementById('searchTerm').value || '').toLowerCase();
             return window.tasks.filter(t => {
+                if (t.archived) return false; // relatórios/PDF nunca incluem cards arquivados
                 const mP = projF.has('all') || projF.has(t.project);
                 const mS = statF.has('all') || statF.has(t.status);
                 const taskOwners = Array.isArray(t.owners) && t.owners.length ? t.owners : (t.owner ? [t.owner] : []);
@@ -6937,7 +6938,7 @@
 
         function buildRelatorioCompletoData() {
             const EMPS = ["BE GARDEN","BE BONIFACIO","BE DUMONT","BE SÃO PAULO"];
-            const tasks = (window.tasks || []).filter(t => t.status !== 'concluido');
+            const tasks = (window.tasks || []).filter(t => !t.archived && t.status !== 'concluido');
             const byEmp = {};
             EMPS.forEach(e => { byEmp[e] = []; });
 
@@ -7100,6 +7101,7 @@
             const seteDiasISO = seteDiasAtras.toISOString().split('T')[0];
 
             return (window.tasks || []).filter(t => {
+                if (t.archived) return false;
                 if (!t.notes) return false;
                 try {
                     const hist = JSON.parse(t.notes);
